@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, redirect, url_for, session, flash, jsonify
+from flask import Flask, render_template, request, redirect, url_for, session, flash, jsonify, send_from_directory
 from models.database import db, InterviewSession, ViolationLog, InterviewQuestion
 import os
 import json
@@ -54,13 +54,6 @@ def generate_meeting_code():
     p2 = secrets.token_hex(2).upper()
     return f"MEET-{p1}-{p2}"
 
-# Initialize database
-with app.app_context():
-    try:
-        db.create_all()
-    except Exception as e:
-        print(f"Database init warning: {e}")
-
 SAMPLE_QUESTIONS = [
     {
         "id": 1,
@@ -104,6 +97,18 @@ def get_or_seed_questions():
         db.session.commit()
         questions = InterviewQuestion.query.filter_by(is_active=True).order_by(InterviewQuestion.order_num.asc(), InterviewQuestion.id.asc()).all()
     return questions
+
+# Initialize database and seed default questions
+with app.app_context():
+    try:
+        db.create_all()
+        get_or_seed_questions()
+    except Exception as e:
+        print(f"Database init warning: {e}")
+
+@app.route('/static/<path:filename>')
+def serve_static(filename):
+    return send_from_directory(os.path.join(BASE_DIR, 'static'), filename)
 
 
 @app.route('/')
@@ -573,15 +578,11 @@ def reset_interview_session(session_id):
     return redirect(url_for('index'))
 
 
-@app.route('/api/index.py')
-def vercel_index():
-    return render_template('index.html')
-
 @app.errorhandler(404)
 def handle_404(e):
-    if request.path in ('/', '/api/index.py', '/index'):
-        return render_template('index.html')
-    return render_template('index.html'), 404
+    if request.path.startswith('/static/'):
+        return "File not found", 404
+    return redirect(url_for('index'))
 
 # Legacy Route Fallbacks (Redirect any old stroke/patient/doctor URLs to Interview Proctoring)
 @app.route('/patient/dashboard')
