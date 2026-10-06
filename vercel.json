@@ -1,0 +1,6 @@
+{
+  "name": "INTERVIEW-EYE-TRACK",
+  "rewrites": [
+    { "source": "/(.*)", "destination": "/api/index.py" }
+  ]
+}

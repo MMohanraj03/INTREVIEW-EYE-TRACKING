@@ -5,9 +5,29 @@ import json
 import secrets
 from datetime import datetime
 
-app = Flask(__name__)
+BASE_DIR = os.path.abspath(os.path.dirname(__file__))
+
+app = Flask(
+    __name__,
+    template_folder=os.path.join(BASE_DIR, 'templates'),
+    static_folder=os.path.join(BASE_DIR, 'static')
+)
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'dev-secret-key-change-in-production')
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///interview_proctor.db'
+
+# Vercel / serverless environment support (ephemeral /tmp SQLite)
+if os.environ.get('VERCEL'):
+    db_file = '/tmp/interview_proctor.db'
+    seed_db = os.path.join(BASE_DIR, 'instance', 'interview_proctor.db')
+    if os.path.exists(seed_db) and not os.path.exists(db_file):
+        try:
+            import shutil
+            shutil.copyfile(seed_db, db_file)
+        except Exception:
+            pass
+    app.config['SQLALCHEMY_DATABASE_URI'] = f'sqlite:///{db_file}'
+else:
+    app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URL', 'sqlite:///interview_proctor.db')
+
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 db.init_app(app)
@@ -36,7 +56,10 @@ def generate_meeting_code():
 
 # Initialize database
 with app.app_context():
-    db.create_all()
+    try:
+        db.create_all()
+    except Exception as e:
+        print(f"Database init warning: {e}")
 
 SAMPLE_QUESTIONS = [
     {

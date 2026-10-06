@@ -54,7 +54,7 @@ An automated, browser-native AI proctoring and technical assessment platform des
 ## Project Structure
 
 ```
-stroke/
+eye_track/
 ├── app.py                      # Main Flask application, proctoring APIs & Admin endpoints
 ├── models/
 │   └── database.py            # SQLite models (InterviewSession, InterviewQuestion, ViolationLog)
