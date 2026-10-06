@@ -1,98 +1,196 @@
 {% extends "base.html" %}
 
-{% block title %}AI Eye-Tracking Live Interview Proctoring System{% endblock %}
+{% block title %}EyeTrack AI - Intelligent Interview Proctoring{% endblock %}
 
 {% block content %}
-<div class="row align-items-center my-4 g-4">
+<!-- Hero Section -->
+<div class="row align-items-center g-4 my-2 my-md-4">
     <div class="col-lg-7">
         <div class="pe-lg-4">
-            <span class="badge bg-danger text-uppercase fw-bold px-3 py-2 mb-3 shadow-sm">
-                <i class="bi bi-eye-fill me-1"></i> Automated AI Proctoring
-            </span>
-            <h1 class="display-5 fw-bold text-dark mb-3">Live Interview Proctoring with Eye Tracking</h1>
-            <p class="lead text-muted mb-4">
-                Automated webcam gaze and head orientation tracking for candidate integrity assurance. Candidates must maintain direct visual focus on their laptop screen. 
-                <strong class="text-danger">Looking away more than 15 times automatically closes and terminates the interview session.</strong>
+            <div class="hero-badge mb-3">
+                <i class="bi bi-sparkles"></i> AI-Powered Proctoring Platform
+            </div>
+            
+            <h1 class="hero-title mb-3">
+                Fair, Intelligent & <br><span style="background: var(--primary-gradient); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">Distraction-Free</span> Interviews
+            </h1>
+            
+            <p class="hero-subtitle mb-4">
+                Automated in-browser eye tracking and candidate focus assurance. MediaPipe computer vision verifies screen presence in real time—with zero external downloads or intrusive software.
             </p>
-            <div class="d-flex flex-wrap gap-3">
-                <a href="{{ url_for('interview_schedule') }}" class="btn btn-primary btn-lg fw-bold px-4 py-3 shadow">
-                    <i class="bi bi-calendar-plus-fill me-1"></i> Schedule Interview & Generate Link
+            
+            <div class="d-flex flex-wrap gap-3 mb-4">
+                <a href="{{ url_for('interview_schedule') }}" class="btn btn-primary btn-lg shadow-sm">
+                    <i class="bi bi-calendar-plus-fill me-1.5"></i> Schedule Interview
                 </a>
-                <a href="{{ url_for('interview_start') }}" class="btn btn-danger btn-lg fw-bold px-4 py-3 shadow-sm">
-                    <i class="bi bi-camera-video-fill me-1"></i> Start Instant Interview
+                <a href="{{ url_for('interview_start') }}" class="btn btn-danger btn-lg shadow-sm">
+                    <i class="bi bi-play-circle-fill me-1.5"></i> Start Instant Session
                 </a>
-                <a href="{{ url_for('proctor_dashboard') }}" class="btn btn-outline-dark btn-lg fw-bold px-4 py-3">
-                    <i class="bi bi-shield-check me-1"></i> Proctor Dashboard
+                <a href="{{ url_for('proctor_dashboard') }}" class="btn btn-outline-dark btn-lg">
+                    <i class="bi bi-shield-check me-1.5"></i> Proctor Dashboard
                 </a>
             </div>
 
-            <!-- Join with Meeting Code or Link Input Box -->
-            <div class="mt-4 p-3 bg-light rounded-3 border">
-                <form method="POST" action="{{ url_for('interview_join_code') }}" class="d-flex gap-2">
+            <!-- Join Meeting with Code / Link Box -->
+            <div class="join-code-card mb-4 shadow-sm">
+                <div class="d-flex align-items-center justify-content-between mb-2">
+                    <label class="form-label fw-bold text-dark mb-0 small text-uppercase" style="letter-spacing: 0.04em;">
+                        <i class="bi bi-link-45deg text-primary me-1 fs-6"></i> Have a Meeting Code or Link?
+                    </label>
+                    <span class="badge bg-light text-muted border">Quick Join</span>
+                </div>
+                <form method="POST" action="{{ url_for('interview_join_code') }}" class="d-flex flex-column flex-sm-row gap-2">
                     <div class="input-group">
-                        <span class="input-group-text bg-white text-muted"><i class="bi bi-link-45deg"></i></span>
-                        <input type="text" name="meeting_code" class="form-control" placeholder="Paste meeting link or code (e.g. MEET-A1B2-C3D4)" required>
+                        <span class="input-group-text bg-white text-muted border-end-0"><i class="bi bi-ticket-perforated"></i></span>
+                        <input type="text" name="meeting_code" class="form-control border-start-0" placeholder="e.g. MEET-A1B2-C3D4 or paste link" required>
                     </div>
-                    <button type="submit" class="btn btn-dark fw-bold text-nowrap px-4">
-                        <i class="bi bi-box-arrow-in-right me-1"></i> Join Interview
+                    <button type="submit" class="btn btn-dark fw-bold text-nowrap px-4 py-2.5">
+                        <i class="bi bi-box-arrow-in-right me-1"></i> Enter Room
                     </button>
                 </form>
             </div>
             
-            <div class="row mt-4 pt-3 border-top g-3">
+            <!-- Quick Feature Highlights -->
+            <div class="row g-3 pt-2">
                 <div class="col-sm-4">
-                    <div class="fw-bold text-dark fs-5"><i class="bi bi-crosshair text-primary me-1"></i> Center Locked</div>
-                    <small class="text-muted">Strict center eyeball monitoring (Left/Right/Top/Bottom flags warning)</small>
+                    <div class="d-flex align-items-center gap-2">
+                        <div class="p-2 rounded-3 bg-primary bg-opacity-10 text-primary">
+                            <i class="bi bi-crosshair fs-5"></i>
+                        </div>
+                        <div>
+                            <div class="fw-bold text-dark small">Screen-Locked Gaze</div>
+                            <span class="text-muted" style="font-size: 0.75rem;">Natural laptop envelope</span>
+                        </div>
+                    </div>
                 </div>
                 <div class="col-sm-4">
-                    <div class="fw-bold text-danger fs-5"><i class="bi bi-slash-circle-fill text-danger me-1"></i> 15 Warnings Max</div>
-                    <small class="text-muted">Strict auto-close upon 15th look-away</small>
+                    <div class="d-flex align-items-center gap-2">
+                        <div class="p-2 rounded-3 bg-danger bg-opacity-10 text-danger">
+                            <i class="bi bi-shield-exclamation fs-5"></i>
+                        </div>
+                        <div>
+                            <div class="fw-bold text-dark small">15-Warning Buffer</div>
+                            <span class="text-muted" style="font-size: 0.75rem;">Clear feedback before lock</span>
+                        </div>
+                    </div>
                 </div>
                 <div class="col-sm-4">
-                    <div class="fw-bold text-success fs-5"><i class="bi bi-calendar-check text-success me-1"></i> Meeting Scheduling</div>
-                    <small class="text-muted">Date, time & shareable unique links</small>
+                    <div class="d-flex align-items-center gap-2">
+                        <div class="p-2 rounded-3 bg-success bg-opacity-10 text-success">
+                            <i class="bi bi-shield-lock fs-5"></i>
+                        </div>
+                        <div>
+                            <div class="fw-bold text-dark small">100% Client Privacy</div>
+                            <span class="text-muted" style="font-size: 0.75rem;">Local WebAssembly AI</span>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
 
+    <!-- Candidate Friendly Guidance & System Readiness Card -->
     <div class="col-lg-5">
-        <div class="card shadow-lg border-0 rounded-4 overflow-hidden">
-            <div class="card-header bg-dark text-white p-4">
-                <h5 class="fw-bold mb-1"><i class="bi bi-shield-shaded text-warning me-2"></i>Automated Proctoring Rules</h5>
-                <small class="text-white-50">Active during all live interview rounds</small>
+        <div class="card border-0 shadow-lg overflow-hidden rounded-4">
+            <div class="card-header p-4 text-white" style="background: var(--dark-surface); border-bottom: 1px solid rgba(255,255,255,0.08);">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <span class="badge bg-primary-subtle text-primary border border-primary-subtle fw-semibold mb-1">CANDIDATE GUIDE</span>
+                        <h5 class="fw-bold mb-0 text-white">How Proctoring Works</h5>
+                    </div>
+                    <div class="icon-wrapper bg-white bg-opacity-10 text-warning m-0" style="width: 44px; height: 44px;">
+                        <i class="bi bi-shield-check"></i>
+                    </div>
+                </div>
             </div>
-            <div class="card-body p-4">
-                <div class="list-group list-group-flush">
-                    <div class="list-group-item border-0 px-0 py-2 d-flex align-items-start gap-2">
-                        <i class="bi bi-crosshair text-success fs-5 mt-0.5"></i>
+            
+            <div class="card-body p-4 bg-white">
+                <div class="vstack gap-3 mb-4">
+                    <div class="checklist-card">
+                        <div class="checklist-icon bg-primary bg-opacity-10 text-primary">
+                            <i class="bi bi-laptop"></i>
+                        </div>
                         <div>
-                            <strong>Eyeballs Must Stand in the Center:</strong> The AI verifies that eyeballs remain centered on the screen. Movement to <strong>LEFT, RIGHT, TOP, or BOTTOM</strong> is checked and marked as a warning every second.
+                            <strong class="text-dark d-block small">1. Maintain Direct Screen Focus</strong>
+                            <span class="text-muted" style="font-size: 0.8rem;">Keep your visual attention centered on your laptop screen. Gaze shifts off-screen are gently flagged.</span>
                         </div>
                     </div>
-                    <div class="list-group-item border-0 px-0 py-2 d-flex align-items-start gap-2">
-                        <i class="bi bi-display text-primary fs-5 mt-0.5"></i>
+
+                    <div class="checklist-card">
+                        <div class="checklist-icon bg-info bg-opacity-10 text-info">
+                            <i class="bi bi-display"></i>
+                        </div>
                         <div>
-                            <strong>Continuous Live Screen Sharing:</strong> Screen share is required throughout the interview. Disconnecting triggers an immediate violation warning.
+                            <strong class="text-dark d-block small">2. Live Screen Sharing Required</strong>
+                            <span class="text-muted" style="font-size: 0.8rem;">Share your full screen for transparent coding and question responses.</span>
                         </div>
                     </div>
-                    <div class="list-group-item border-0 px-0 py-2 d-flex align-items-start gap-2">
-                        <i class="bi bi-x-octagon-fill text-danger fs-5 mt-0.5"></i>
+
+                    <div class="checklist-card">
+                        <div class="checklist-icon bg-success bg-opacity-10 text-success">
+                            <i class="bi bi-sliders"></i>
+                        </div>
                         <div>
-                            <strong>15 Warnings Auto-Termination:</strong> Reaching 15 violations automatically closes the webcam, freezes answer submissions, and permanently locks the session.
+                            <strong class="text-dark d-block small">3. 1-Click Screen Calibration</strong>
+                            <span class="text-muted" style="font-size: 0.8rem;">Click "Calibrate Screen" anytime to adapt the AI to your chair posture and laptop tilt.</span>
                         </div>
                     </div>
                 </div>
 
-                <div class="mt-4 pt-3 border-top text-center d-flex gap-2">
-                    <a href="{{ url_for('interview_schedule') }}" class="btn btn-primary fw-bold w-100 py-2.5">
-                        <i class="bi bi-calendar-plus me-1"></i> Schedule Interview
-                    </a>
-                    <a href="{{ url_for('interview_start') }}" class="btn btn-outline-danger fw-bold w-100 py-2.5">
-                        <i class="bi bi-play-circle-fill me-1"></i> Start Instant
-                    </a>
+                <div class="p-3 rounded-3 bg-light border text-center">
+                    <div class="d-flex align-items-center justify-content-center gap-2 mb-2">
+                        <span class="pulse-dot"></span>
+                        <span class="fw-bold text-dark small">Ready for your interview?</span>
+                    </div>
+                    <div class="d-flex gap-2">
+                        <a href="{{ url_for('interview_schedule') }}" class="btn btn-outline-primary fw-bold w-100 py-2 small">
+                            <i class="bi bi-calendar-check me-1"></i> Schedule
+                        </a>
+                        <a href="{{ url_for('interview_start') }}" class="btn btn-primary fw-bold w-100 py-2 small">
+                            <i class="bi bi-person-video me-1"></i> Start Now
+                        </a>
+                    </div>
                 </div>
             </div>
+        </div>
+    </div>
+</div>
+
+<!-- Key Features Section -->
+<div class="row g-4 mt-2 mb-4">
+    <div class="col-md-4">
+        <div class="feature-card p-4">
+            <div class="icon-wrapper bg-primary bg-opacity-10 text-primary">
+                <i class="bi bi-eye"></i>
+            </div>
+            <h5 class="fw-bold text-dark mb-2">High-Precision Eye Tracking</h5>
+            <p class="text-muted small mb-0">
+                468 3D facial landmarks tracked at 60 FPS directly in the browser via WebAssembly. Calibrated specifically for laptop screen reading without false alarms.
+            </p>
+        </div>
+    </div>
+
+    <div class="col-md-4">
+        <div class="feature-card p-4">
+            <div class="icon-wrapper bg-success bg-opacity-10 text-success">
+                <i class="bi bi-controller"></i>
+            </div>
+            <h5 class="fw-bold text-dark mb-2">Admin Question Control</h5>
+            <p class="text-muted small mb-0">
+                Interviewers control the question flow in real-time. Candidate answers auto-save securely with live synchronization across all devices.
+            </p>
+        </div>
+    </div>
+
+    <div class="col-md-4">
+        <div class="feature-card p-4">
+            <div class="icon-wrapper bg-danger bg-opacity-10 text-danger">
+                <i class="bi bi-shield-check"></i>
+            </div>
+            <h5 class="fw-bold text-dark mb-2">Real-Time Proctor Audit</h5>
+            <p class="text-muted small mb-0">
+                Live dashboard tracks candidate status, scheduled meetings, and violation audit logs with timestamped reasoning.
+            </p>
         </div>
     </div>
 </div>

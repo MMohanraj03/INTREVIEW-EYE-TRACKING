@@ -1,130 +1,343 @@
+/* ==========================================================================
+   AI Eye-Tracking Proctor Design System - Modern, High-End UI
+   ========================================================================== */
+
+:root {
+    --font-sans: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+    
+    /* Color Palette */
+    --primary: #4f46e5;
+    --primary-hover: #4338ca;
+    --primary-light: #e0e7ff;
+    --primary-gradient: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+    
+    --success: #059669;
+    --success-light: #d1fae5;
+    --success-gradient: linear-gradient(135deg, #059669 0%, #10b981 100%);
+    
+    --warning: #d97706;
+    --warning-light: #fef3c7;
+    
+    --danger: #e11d48;
+    --danger-light: #ffe4e6;
+    --danger-gradient: linear-gradient(135deg, #e11d48 0%, #f43f5e 100%);
+    
+    --dark: #0f172a;
+    --dark-surface: #1e293b;
+    --slate-50: #f8fafc;
+    --slate-100: #f1f5f9;
+    --slate-200: #e2e8f0;
+    --slate-300: #cbd5e1;
+    --slate-600: #475569;
+    --slate-700: #334155;
+    --slate-800: #1e293b;
+    --slate-900: #0f172a;
+
+    --card-shadow: 0 4px 6px -1px rgba(15, 23, 42, 0.05), 0 2px 4px -2px rgba(15, 23, 42, 0.05);
+    --hover-shadow: 0 20px 25px -5px rgba(15, 23, 42, 0.08), 0 8px 10px -6px rgba(15, 23, 42, 0.04);
+    --glow-shadow: 0 0 20px rgba(79, 70, 229, 0.25);
+    
+    --radius-sm: 8px;
+    --radius-md: 12px;
+    --radius-lg: 18px;
+    --radius-xl: 24px;
+}
+
+/* Global Reset & Base */
 body {
-    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-    background-color: #f8f9fa;
+    font-family: var(--font-sans);
+    background-color: #f8fafc;
+    color: var(--slate-800);
     min-height: 100vh;
     display: flex;
     flex-direction: column;
+    letter-spacing: -0.01em;
+    -webkit-font-smoothing: antialiased;
 }
 
 main {
     flex: 1;
 }
 
-.navbar-brand {
-    font-size: 1.5rem;
-    font-weight: 600;
+/* Glassmorphism Navbar */
+.glass-nav {
+    background: rgba(15, 23, 42, 0.92) !important;
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    transition: all 0.3s ease;
 }
 
-.card {
-    border: none;
+.brand-icon {
+    width: 38px;
+    height: 38px;
+    background: var(--primary-gradient);
     border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+    box-shadow: 0 4px 12px rgba(79, 70, 229, 0.35);
+    font-size: 1.15rem;
 }
 
-.card-header {
-    border-radius: 10px 10px 0 0 !important;
+.brand-text {
+    font-size: 1.25rem;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    color: #ffffff;
 }
 
-.form-label {
-    font-weight: 500;
-    margin-bottom: 0.5rem;
+.brand-text span {
+    background: linear-gradient(135deg, #a5b4fc 0%, #c084fc 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
 }
 
-.form-control:focus,
-.form-select:focus {
-    border-color: #0d6efd;
-    box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.25);
+/* Pulse Dot Animation for System Status */
+.pulse-dot {
+    width: 8px;
+    height: 8px;
+    background-color: #10b981;
+    border-radius: 50%;
+    display: inline-block;
+    position: relative;
+    box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7);
+    animation: pulseGlow 2s infinite;
+}
+
+@keyframes pulseGlow {
+    0% {
+        box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7);
+    }
+    70% {
+        box-shadow: 0 0 0 8px rgba(16, 185, 129, 0);
+    }
+    100% {
+        box-shadow: 0 0 0 0 rgba(16, 185, 129, 0);
+    }
+}
+
+/* Modern Card Styling */
+.card {
+    border: 1px solid var(--slate-200);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--card-shadow);
+    transition: transform 0.25s ease, box-shadow 0.25s ease, border-color 0.25s ease;
+    background: #ffffff;
+}
+
+.card:hover {
+    box-shadow: var(--hover-shadow);
+}
+
+.feature-card {
+    border-radius: var(--radius-lg);
+    border: 1px solid var(--slate-200);
+    background: #ffffff;
+    transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    height: 100%;
+}
+
+.feature-card:hover {
+    transform: translateY(-4px);
+    box-shadow: var(--hover-shadow);
+    border-color: #cbd5e1;
+}
+
+.icon-wrapper {
+    width: 52px;
+    height: 52px;
+    border-radius: var(--radius-md);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
+    margin-bottom: 1rem;
+}
+
+/* Modern Gradient Buttons */
+.btn {
+    border-radius: var(--radius-md);
+    font-weight: 600;
+    letter-spacing: -0.01em;
+    padding: 0.65rem 1.35rem;
+    transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .btn-primary {
-    background-color: #0d6efd;
-    border-color: #0d6efd;
-    font-weight: 500;
+    background: var(--primary-gradient);
+    border: none;
+    color: #ffffff;
+    box-shadow: 0 4px 14px rgba(79, 70, 229, 0.3);
 }
 
-.btn-primary:hover {
-    background-color: #0b5ed7;
-    border-color: #0a58ca;
+.btn-primary:hover, .btn-primary:focus {
+    background: linear-gradient(135deg, #4338ca 0%, #6d28d9 100%);
+    color: #ffffff;
+    transform: translateY(-2px);
+    box-shadow: 0 6px 18px rgba(79, 70, 229, 0.4);
 }
 
-.progress {
-    border-radius: 10px;
-    overflow: hidden;
+.btn-danger {
+    background: var(--danger-gradient);
+    border: none;
+    color: #ffffff;
+    box-shadow: 0 4px 14px rgba(225, 29, 72, 0.3);
 }
 
-.progress-bar {
-    transition: width 0.6s ease;
+.btn-danger:hover, .btn-danger:focus {
+    background: linear-gradient(135deg, #be123c 0%, #e11d48 100%);
+    color: #ffffff;
+    transform: translateY(-2px);
+    box-shadow: 0 6px 18px rgba(225, 29, 72, 0.4);
 }
 
-.alert {
-    border-radius: 8px;
+.btn-success {
+    background: var(--success-gradient);
+    border: none;
+    color: #ffffff;
+    box-shadow: 0 4px 14px rgba(5, 150, 105, 0.3);
 }
 
-.table {
-    margin-bottom: 0;
+.btn-success:hover, .btn-success:focus {
+    background: linear-gradient(135deg, #047857 0%, #059669 100%);
+    color: #ffffff;
+    transform: translateY(-2px);
+    box-shadow: 0 6px 18px rgba(5, 150, 105, 0.4);
 }
 
-.table th {
-    background-color: #f8f9fa;
+.btn-outline-dark {
+    border: 1.5px solid var(--slate-300);
+    color: var(--slate-700);
+    background: transparent;
+}
+
+.btn-outline-dark:hover {
+    background: var(--slate-100);
+    color: var(--slate-900);
+    border-color: var(--slate-400);
+    transform: translateY(-2px);
+}
+
+/* Hero Section */
+.hero-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 14px;
+    background: rgba(79, 70, 229, 0.08);
+    border: 1px solid rgba(79, 70, 229, 0.2);
+    color: var(--primary);
+    font-size: 0.85rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    border-radius: 9999px;
+}
+
+.hero-title {
+    font-size: 3rem;
+    font-weight: 800;
+    line-height: 1.15;
+    letter-spacing: -0.03em;
+    color: var(--slate-900);
+}
+
+.hero-subtitle {
+    font-size: 1.15rem;
+    line-height: 1.6;
+    color: var(--slate-600);
+}
+
+/* Meeting Code Input Box */
+.join-code-card {
+    background: #ffffff;
+    border: 1.5px dashed var(--slate-300);
+    border-radius: var(--radius-lg);
+    padding: 1.25rem;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.join-code-card:focus-within {
+    border-color: var(--primary);
+    box-shadow: 0 0 0 4px rgba(79, 70, 229, 0.1);
+}
+
+/* Modern Form Controls */
+.form-control, .form-select {
+    border-radius: var(--radius-md);
+    border: 1.5px solid var(--slate-200);
+    padding: 0.75rem 1rem;
+    font-size: 0.95rem;
+    color: var(--slate-900);
+    transition: all 0.2s ease;
+    background-color: #ffffff;
+}
+
+.form-control:focus, .form-select:focus {
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3.5px rgba(79, 70, 229, 0.15);
+    background-color: #ffffff;
+}
+
+.form-label {
     font-weight: 600;
-    border-top: none;
+    font-size: 0.875rem;
+    color: var(--slate-700);
+    margin-bottom: 0.4rem;
 }
 
+/* Modern Pill Badges */
 .badge {
-    padding: 0.5em 0.75em;
-    font-weight: 500;
+    padding: 0.45em 0.85em;
+    font-weight: 600;
+    font-size: 0.78rem;
+    border-radius: 9999px;
+    letter-spacing: 0.01em;
 }
 
+/* Pre-Flight Checklist Widget */
+.checklist-card {
+    background: #ffffff;
+    border-radius: var(--radius-md);
+    padding: 1rem;
+    border: 1px solid var(--slate-200);
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.checklist-icon {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.15rem;
+    flex-shrink: 0;
+}
+
+/* Footer Styling */
 footer {
+    background: #ffffff;
+    border-top: 1px solid var(--slate-200);
     margin-top: auto;
 }
 
-/* Prediction result styling */
-.alert-danger h4,
-.alert-success h4 {
-    margin-bottom: 0.5rem;
-}
-
-/* Form styling improvements */
-.card-body.p-5 {
-    padding: 3rem !important;
-}
-
-@media (max-width: 768px) {
-    .card-body.p-5 {
-        padding: 2rem !important;
-    }
-    
-    .navbar-brand {
-        font-size: 1.2rem;
+/* Mobile Responsiveness */
+@media (max-width: 991px) {
+    .hero-title {
+        font-size: 2.25rem;
     }
 }
 
-/* Loading state */
-.btn.loading {
-    pointer-events: none;
-    opacity: 0.6;
-}
-
-/* Table responsive improvements */
-.table-responsive {
-    border-radius: 8px;
-}
-
-/* Custom scrollbar for tables */
-.table-responsive::-webkit-scrollbar {
-    height: 8px;
-}
-
-.table-responsive::-webkit-scrollbar-track {
-    background: #f1f1f1;
-    border-radius: 4px;
-}
-
-.table-responsive::-webkit-scrollbar-thumb {
-    background: #888;
-    border-radius: 4px;
-}
-
-.table-responsive::-webkit-scrollbar-thumb:hover {
-    background: #555;
+@media (max-width: 576px) {
+    .hero-title {
+        font-size: 1.85rem;
+    }
+    .btn {
+        width: 100%;
+    }
 }

@@ -1,67 +1,86 @@
 {% extends "base.html" %}
 
-{% block title %}Start Live AI-Proctored Interview{% endblock %}
+{% block title %}Start Instant Interview - EyeTrack AI{% endblock %}
 
 {% block content %}
-<div class="row justify-content-center my-4">
-    <div class="col-lg-8">
+<div class="row justify-content-center my-3 my-md-4">
+    <div class="col-lg-8 col-xl-7">
         <div class="card shadow-lg border-0 rounded-4 overflow-hidden">
-            <div class="p-4 p-md-5 bg-primary text-white text-center" style="background: linear-gradient(135deg, #1e3a8a 0%, #0284c7 100%) !important;">
-                <div class="d-inline-flex p-3 rounded-circle bg-white bg-opacity-10 mb-3 fs-1">
-                    <i class="bi bi-eye"></i>
+            <!-- Header Banner -->
+            <div class="p-4 p-md-5 text-white text-center" style="background: var(--primary-gradient);">
+                <div class="d-inline-flex p-3 rounded-circle bg-white bg-opacity-15 mb-3 fs-2 shadow-sm">
+                    <i class="bi bi-person-video"></i>
                 </div>
-                <h2 class="fw-bold mb-2">Live AI-Proctored Interview</h2>
-                <p class="mb-0 text-white-50 lead fs-6">
-                    Real-time webcam eye and gaze tracking proctoring system.
+                <h2 class="fw-bold mb-1">Instant Interview Check-In</h2>
+                <p class="mb-0 text-white-50 small">
+                    Enter your details to initiate an AI-proctored technical interview room.
                 </p>
             </div>
 
             <div class="card-body p-4 p-md-5 bg-white">
-                <!-- Critical Proctoring Policy Alert -->
-                <div class="alert alert-danger border-0 shadow-sm p-4 mb-4 rounded-3" style="background: #fef2f2; border-left: 6px solid #dc2626 !important;">
+                <!-- Reassuring Candidate Guidance Box -->
+                <div class="p-3.5 mb-4 rounded-3 border bg-light">
                     <div class="d-flex align-items-start gap-3">
-                        <i class="bi bi-shield-exclamation text-danger fs-2"></i>
+                        <div class="p-2 rounded-2 bg-primary bg-opacity-10 text-primary fs-4 mt-0.5">
+                            <i class="bi bi-info-circle-fill"></i>
+                        </div>
                         <div>
-                            <h5 class="fw-bold text-danger mb-1">MANDATORY EYE-TRACKING PROCTORING RULES</h5>
-                            <p class="mb-2 text-dark small">
-                                This interview uses automated in-browser computer vision to continuously verify that you are looking at your laptop screen.
+                            <h6 class="fw-bold text-dark mb-1">Candidate Focus Guidelines</h6>
+                            <p class="text-muted small mb-2">
+                                Our AI system uses your webcam to verify that you are looking at your screen. Please keep the following in mind:
                             </p>
-                            <ul class="mb-0 small text-danger-emphasis fw-semibold">
-                                <li>You must maintain direct eye contact with the laptop screen at all times.</li>
-                                <li>Looking away (to the left, right, looking down at a phone/notes, looking up, or leaving camera) triggers a warning.</li>
-                                <li><strong>STRICT AUTOMATIC CLOSURE:</strong> If you look away more than <strong>15 times</strong>, the interview will <strong>AUTOMATICALLY TERMINATE AND CLOSE</strong>.</li>
+                            <ul class="text-muted small mb-0 ps-3">
+                                <li>Ensure your room has good lighting on your face.</li>
+                                <li>Keep visual attention focused on the laptop screen.</li>
+                                <li>You have a <strong>15-warning buffer</strong> for natural pauses and posture shifts before the session locks.</li>
                             </ul>
                         </div>
                     </div>
                 </div>
 
                 <form method="POST" action="{{ url_for('interview_start') }}">
-                    <div class="mb-3">
-                        <label for="candidate_name" class="form-label fw-bold">Full Name <span class="text-danger">*</span></label>
-                        <input type="text" class="form-control form-control-lg" id="candidate_name" name="candidate_name" placeholder="e.g. John Doe" required>
+                    <div class="mb-3.5">
+                        <label for="candidate_name" class="form-label">Full Name <span class="text-danger">*</span></label>
+                        <div class="input-group">
+                            <span class="input-group-text bg-white text-muted"><i class="bi bi-person"></i></span>
+                            <input type="text" class="form-control" id="candidate_name" name="candidate_name" placeholder="e.g. John Doe" required autofocus>
+                        </div>
                     </div>
 
-                    <div class="mb-3">
-                        <label for="candidate_email" class="form-label fw-bold">Email Address <span class="text-danger">*</span></label>
-                        <input type="email" class="form-control form-control-lg" id="candidate_email" name="candidate_email" placeholder="e.g. john.doe@example.com" required>
+                    <div class="mb-3.5">
+                        <label for="candidate_email" class="form-label">Email Address <span class="text-danger">*</span></label>
+                        <div class="input-group">
+                            <span class="input-group-text bg-white text-muted"><i class="bi bi-envelope"></i></span>
+                            <input type="email" class="form-control" id="candidate_email" name="candidate_email" placeholder="e.g. john.doe@example.com" required>
+                        </div>
                     </div>
 
                     <div class="mb-4">
-                        <label for="role_applied" class="form-label fw-bold">Interview Position</label>
-                        <select class="form-select form-select-lg" id="role_applied" name="role_applied">
-                            <option value="Software Development Engineer">Software Development Engineer</option>
-                            <option value="Full-Stack Web Developer">Full-Stack Web Developer</option>
-                            <option value="AI / Machine Learning Engineer">AI / Machine Learning Engineer</option>
-                            <option value="Data Analyst / Scientist">Data Analyst / Scientist</option>
-                        </select>
+                        <label for="role_applied" class="form-label">Interview Position</label>
+                        <div class="input-group">
+                            <span class="input-group-text bg-white text-muted"><i class="bi bi-briefcase"></i></span>
+                            <select class="form-select" id="role_applied" name="role_applied">
+                                <option value="Software Development Engineer">Software Development Engineer</option>
+                                <option value="Full-Stack Web Developer">Full-Stack Web Developer</option>
+                                <option value="AI / Machine Learning Engineer" selected>AI / Machine Learning Engineer</option>
+                                <option value="Data Analyst / Scientist">Data Analyst / Scientist</option>
+                                <option value="Frontend UI/UX Engineer">Frontend UI/UX Engineer</option>
+                            </select>
+                        </div>
                     </div>
 
                     <input type="hidden" name="max_violations" value="15">
 
                     <div class="d-grid mt-4">
-                        <button type="submit" class="btn btn-primary btn-lg fw-bold py-3 shadow">
-                            <i class="bi bi-camera-video me-1"></i> I Understand & Start Proctored Interview
+                        <button type="submit" class="btn btn-primary btn-lg shadow-sm py-3">
+                            <i class="bi bi-camera-video me-1.5"></i> Enter Proctored Interview Room
                         </button>
+                    </div>
+
+                    <div class="text-center mt-3">
+                        <small class="text-muted">
+                            <i class="bi bi-shield-check text-success me-1"></i> Camera video streams are evaluated 100% on-device and never recorded.
+                        </small>
                     </div>
                 </form>
             </div>

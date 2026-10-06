@@ -1,76 +1,87 @@
 {% extends "base.html" %}
 
-{% block title %}Schedule Interview & Generate Meeting Link{% endblock %}
+{% block title %}Schedule Interview - EyeTrack AI{% endblock %}
 
 {% block content %}
-<div class="row justify-content-center my-4">
-    <div class="col-lg-8">
+<div class="row justify-content-center my-3 my-md-4">
+    <div class="col-lg-8 col-xl-7">
         <div class="card shadow-lg border-0 rounded-4 overflow-hidden">
-            <div class="p-4 p-md-5 text-white text-center" style="background: linear-gradient(135deg, #0f172a 0%, #1e3a8a 100%) !important;">
-                <div class="d-inline-flex p-3 rounded-circle bg-white bg-opacity-10 mb-3 fs-1">
-                    <i class="bi bi-calendar-check-fill text-info"></i>
+            <!-- Header Banner -->
+            <div class="p-4 p-md-5 text-white text-center" style="background: linear-gradient(135deg, #0f172a 0%, #1e3a8a 100%);">
+                <div class="d-inline-flex p-3 rounded-circle bg-white bg-opacity-15 mb-3 fs-2 shadow-sm text-info">
+                    <i class="bi bi-calendar-plus"></i>
                 </div>
-                <h2 class="fw-bold mb-2">Schedule Interview & Generate Meeting Link</h2>
-                <p class="mb-0 text-white-50 lead fs-6">
-                    Set up an AI-proctored interview with scheduled date, time, and a shareable meeting link.
+                <h2 class="fw-bold mb-1">Schedule Live Interview</h2>
+                <p class="mb-0 text-white-50 small">
+                    Generate a secure, shareable meeting link with automated eye-tracking proctoring.
                 </p>
             </div>
 
             <div class="card-body p-4 p-md-5 bg-white">
-                <!-- Eye-Tracking Proctoring Policy Alert -->
-                <div class="alert alert-danger border-0 shadow-sm p-3 mb-4 rounded-3" style="background: #fef2f2; border-left: 5px solid #dc2626 !important;">
-                    <div class="d-flex align-items-center gap-3">
-                        <i class="bi bi-eye-fill text-danger fs-3"></i>
-                        <div class="small">
-                            <strong>AI Proctoring Policy:</strong> Candidate eyeballs must stand strictly in the <strong>CENTER</strong>. Any gaze shifting to the <strong>LEFT, RIGHT, TOP, or BOTTOM</strong> is checked and marked as a warning every second. 15 warnings automatically locks and terminates the session.
-                        </div>
-                    </div>
-                </div>
-
                 <form method="POST" action="{{ url_for('interview_schedule') }}">
                     <div class="row g-3">
                         <div class="col-md-6">
-                            <label for="candidate_name" class="form-label fw-bold">Candidate Full Name <span class="text-danger">*</span></label>
-                            <input type="text" class="form-control form-control-lg" id="candidate_name" name="candidate_name" placeholder="e.g. Sarah Connor" required>
+                            <label for="candidate_name" class="form-label">Candidate Name <span class="text-danger">*</span></label>
+                            <div class="input-group">
+                                <span class="input-group-text bg-white text-muted"><i class="bi bi-person"></i></span>
+                                <input type="text" class="form-control" id="candidate_name" name="candidate_name" placeholder="e.g. Sarah Connor" required autofocus>
+                            </div>
                         </div>
 
                         <div class="col-md-6">
-                            <label for="candidate_email" class="form-label fw-bold">Candidate Email <span class="text-danger">*</span></label>
-                            <input type="email" class="form-control form-control-lg" id="candidate_email" name="candidate_email" placeholder="e.g. sarah@example.com" required>
+                            <label for="candidate_email" class="form-label">Candidate Email <span class="text-danger">*</span></label>
+                            <div class="input-group">
+                                <span class="input-group-text bg-white text-muted"><i class="bi bi-envelope"></i></span>
+                                <input type="email" class="form-control" id="candidate_email" name="candidate_email" placeholder="e.g. sarah@example.com" required>
+                            </div>
                         </div>
 
                         <div class="col-12">
-                            <label for="role_applied" class="form-label fw-bold">Job Role / Position <span class="text-danger">*</span></label>
-                            <select class="form-select form-select-lg" id="role_applied" name="role_applied" required>
-                                <option value="Software Development Engineer">Software Development Engineer</option>
-                                <option value="Full-Stack Web Developer">Full-Stack Web Developer</option>
-                                <option value="AI / Machine Learning Engineer" selected>AI / Machine Learning Engineer</option>
-                                <option value="Frontend Developer">Frontend Developer</option>
-                                <option value="Backend Systems Engineer">Backend Systems Engineer</option>
-                                <option value="Data Scientist">Data Scientist</option>
-                            </select>
+                            <label for="role_applied" class="form-label">Target Position <span class="text-danger">*</span></label>
+                            <div class="input-group">
+                                <span class="input-group-text bg-white text-muted"><i class="bi bi-briefcase"></i></span>
+                                <select class="form-select" id="role_applied" name="role_applied" required>
+                                    <option value="Software Development Engineer">Software Development Engineer</option>
+                                    <option value="Full-Stack Web Developer">Full-Stack Web Developer</option>
+                                    <option value="AI / Machine Learning Engineer" selected>AI / Machine Learning Engineer</option>
+                                    <option value="Frontend Developer">Frontend Developer</option>
+                                    <option value="Backend Systems Engineer">Backend Systems Engineer</option>
+                                    <option value="Data Scientist">Data Scientist</option>
+                                </select>
+                            </div>
                         </div>
 
                         <div class="col-md-6">
-                            <label for="scheduled_date" class="form-label fw-bold">
-                                <i class="bi bi-calendar-event me-1 text-primary"></i> Schedule Date <span class="text-danger">*</span>
+                            <label for="scheduled_date" class="form-label">
+                                <i class="bi bi-calendar-event me-1 text-primary"></i> Date <span class="text-danger">*</span>
                             </label>
-                            <input type="date" class="form-control form-control-lg" id="scheduled_date" name="scheduled_date" required>
+                            <input type="date" class="form-control" id="scheduled_date" name="scheduled_date" required>
                         </div>
 
                         <div class="col-md-6">
-                            <label for="scheduled_time" class="form-label fw-bold">
-                                <i class="bi bi-clock me-1 text-primary"></i> Schedule Time <span class="text-danger">*</span>
+                            <label for="scheduled_time" class="form-label">
+                                <i class="bi bi-clock me-1 text-primary"></i> Time <span class="text-danger">*</span>
                             </label>
-                            <input type="time" class="form-control form-control-lg" id="scheduled_time" name="scheduled_time" required>
+                            <input type="time" class="form-control" id="scheduled_time" name="scheduled_time" required>
                         </div>
 
                         <input type="hidden" name="max_violations" value="15">
                     </div>
 
+                    <!-- Proctoring Specs Info Box -->
+                    <div class="mt-4 p-3 bg-light rounded-3 border d-flex align-items-center gap-3">
+                        <div class="p-2 rounded-2 bg-success bg-opacity-10 text-success fs-4">
+                            <i class="bi bi-shield-check"></i>
+                        </div>
+                        <div class="small">
+                            <strong class="text-dark d-block">Automatic Focus Shield Active</strong>
+                            <span class="text-muted">Session monitors candidate eyeball alignment on screen with a 15-warning allowance.</span>
+                        </div>
+                    </div>
+
                     <div class="d-grid mt-4">
-                        <button type="submit" class="btn btn-primary btn-lg fw-bold py-3 shadow">
-                            <i class="bi bi-link-45deg me-1 fs-5"></i> Generate Interview Meeting Link
+                        <button type="submit" class="btn btn-primary btn-lg shadow-sm py-3">
+                            <i class="bi bi-link-45deg me-1 fs-5"></i> Generate Shareable Meeting Link
                         </button>
                     </div>
                 </form>
@@ -80,7 +91,6 @@
 </div>
 
 <script>
-    // Default date to today and time to next hour
     document.addEventListener('DOMContentLoaded', () => {
         const today = new Date();
         const dateInput = document.getElementById('scheduled_date');
