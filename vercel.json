@@ -1,5 +1,5 @@
 {
-  "name": "INTERVIEW-EYE-TRACK",
+  "name": "interview-eye-track",
   "rewrites": [
     { "source": "/(.*)", "destination": "/api/index.py" }
   ]

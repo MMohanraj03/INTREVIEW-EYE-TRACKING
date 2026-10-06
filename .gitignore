@@ -32,3 +32,6 @@ ehthumbs.db
 scratch/
 .system_generated/
 migrate_questions.py
+
+.vercel
+.env*
