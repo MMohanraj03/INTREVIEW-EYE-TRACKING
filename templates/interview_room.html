@@ -1,0 +1,1055 @@
+{% extends "base.html" %}
+
+{% block title %}AI-Proctored Live Interview | Eye Tracking System{% endblock %}
+
+{% block content %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/interview.css') }}">
+
+<div class="interview-container">
+    <!-- Header with Candidate Info & Proctoring Rules -->
+    <div class="proctor-header d-flex justify-content-between align-items-center flex-wrap gap-3">
+        <div>
+            <div class="d-flex align-items-center gap-2 flex-wrap">
+                <span class="badge bg-danger-subtle text-danger border border-danger-subtle fw-bold px-2.5 py-1.5">
+                    <i class="bi bi-camera-video-fill me-1"></i> LIVE EYE TRACKING ACTIVE
+                </span>
+                <span class="badge bg-dark text-info border border-info fw-bold px-2.5 py-1.5" title="Calibrated laptop screen gaze monitoring with anti-flicker protection">
+                    <i class="bi bi-display me-1"></i> SCREEN PROCTOR ACTIVE
+                </span>
+                <span id="headerScreenStatus" class="badge bg-danger fw-bold px-2.5 py-1.5">
+                    <i class="bi bi-display-slash me-1"></i> Screen Not Shared
+                </span>
+                <span class="text-muted small">Session #{{ interview.id }}</span>
+                {% if interview.meeting_code %}
+                <button type="button" class="btn btn-outline-primary btn-sm py-0 px-2 fw-semibold" onclick="navigator.clipboard.writeText('{{ interview.meeting_link or url_for('interview_join', meeting_code=interview.meeting_code, _external=True) }}').then(() => alert('Meeting Link Copied to Clipboard!'))" title="Copy meeting link">
+                    <i class="bi bi-link-45deg me-0.5"></i> {{ interview.meeting_code }} <i class="bi bi-clipboard ms-0.5"></i>
+                </button>
+                {% endif %}
+            </div>
+            <h4 class="mb-0 fw-bold mt-1 text-dark">{{ interview.role_applied }}</h4>
+            <small class="text-muted">Candidate: <strong>{{ interview.candidate_name }}</strong> ({{ interview.candidate_email }})</small>
+        </div>
+
+        <!-- Warning Counter Widget (15 Limit) -->
+        <div class="d-flex align-items-center gap-3">
+            <div class="warning-counter-card text-center" id="warningCounterBox">
+                <div class="d-flex align-items-baseline justify-content-center gap-1">
+                    <span class="counter-number text-danger" id="violationCountDisplay">{{ interview.violations_count }}</span>
+                    <span class="fs-5 text-muted fw-bold">/</span>
+                    <span class="fs-5 text-muted fw-bold" id="violationMaxDisplay">{{ max_violations }}</span>
+                </div>
+                <div class="small fw-bold text-uppercase text-danger" style="letter-spacing: 0.5px;">Off-Screen Warnings</div>
+                <div class="progress mt-1" style="height: 6px; width: 140px;">
+                    <div id="violationProgressBar" class="progress-bar bg-danger" style="width: {{ (interview.violations_count / max_violations) * 100 }}%;"></div>
+                </div>
+                <small class="text-muted d-block mt-1 font-monospace" id="violationsRemainingText" style="font-size: 0.72rem;">
+                    {{ max_violations - interview.violations_count }} remaining before auto-close
+                </small>
+            </div>
+
+            <button class="btn btn-success fw-bold px-3 py-2.5 shadow-sm" id="submitInterviewBtn">
+                <i class="bi bi-check2-circle me-1"></i> Submit Interview
+            </button>
+            <a href="{{ url_for('index') }}" class="btn btn-outline-dark fw-bold px-3 py-2.5" title="Exit to Home Screen">
+                <i class="bi bi-house-door-fill me-1"></i> Home Screen
+            </a>
+        </div>
+    </div>
+
+    <!-- Active Look-Away Flashing Alert Banner -->
+    <div id="warningFlashBanner" class="warning-flash-banner d-none mb-3 d-flex align-items-center gap-2">
+        <i class="bi bi-exclamation-triangle-fill fs-4"></i>
+        <div id="warningFlashText">Warning! Looking away from the laptop screen detected.</div>
+    </div>
+
+    <!-- Main Workspace Split: Camera on Left, Questions on Right -->
+    <div class="row g-4">
+        <!-- Left: AI Eye-Tracking Webcam Monitor -->
+        <div class="col-lg-5">
+            <div class="proctor-cam-card mb-4 sticky-top" style="top: 20px; z-index: 100;">
+                <div class="p-3 bg-dark text-white d-flex justify-content-between align-items-center">
+                    <div class="d-flex align-items-center gap-2">
+                        <span class="spinner-grow spinner-grow-sm text-danger" role="status"></span>
+                        <span class="fw-bold small" id="cameraStatusText">AI Eye Proctor Active</span>
+                    </div>
+                    <span class="badge bg-secondary small" id="liveGazeStatus">LOOKING AT LAPTOP</span>
+                </div>
+
+                <!-- Camera Device Selector (Choose Laptop Webcam vs Phone Camera) -->
+                <div class="px-3 py-2 bg-black border-bottom border-secondary d-flex align-items-center gap-2 flex-wrap">
+                    <label for="cameraSelect" class="small text-white-50 fw-semibold text-nowrap mb-0">
+                        <i class="bi bi-camera-video me-1 text-primary"></i> Camera:
+                    </label>
+                    <select id="cameraSelect" class="form-select form-select-sm bg-dark text-white border-secondary flex-grow-1" style="min-width: 170px;">
+                        <option value="">Detecting cameras...</option>
+                    </select>
+                    <button class="btn btn-outline-light btn-sm py-1 px-2 text-nowrap" id="refreshCamerasBtn" type="button" title="Detect & Switch to Laptop Camera">
+                        <i class="bi bi-arrow-repeat"></i> Switch/Scan
+                    </button>
+                </div>
+
+                <!-- Video Feed with Canvas Overlay -->
+                <div class="cam-feed-wrapper">
+                    <video id="proctorVideo" playsinline autoplay muted></video>
+                    <canvas id="proctorCanvas" width="480" height="360"></canvas>
+                    
+                    <!-- Look-Away Sustained Countdown Bar -->
+                    <div class="lookaway-indicator-bar-wrapper">
+                        <div id="lookAwayWarningBar" class="lookaway-indicator-bar"></div>
+                    </div>
+                </div>
+
+                <!-- Look-Away Alert Message Box under Video -->
+                <div id="activeLookAwayAlert" class="alert alert-danger mb-0 rounded-0 border-0 py-2 px-3 small d-none d-flex align-items-center gap-2">
+                    <i class="bi bi-eye-slash-fill fs-5 text-danger"></i>
+                    <div id="activeLookAwayAlertText">
+                        <strong>Looking away detected!</strong> Return eyes to laptop screen immediately to avoid penalty.
+                    </div>
+                </div>
+
+                <!-- Proctoring Instructions & Controls -->
+                <div class="p-3 bg-white border-top">
+                    <div class="alert alert-info py-2.5 px-3 mb-2 small border border-info-subtle bg-info-subtle text-info-emphasis" id="proctorNotice">
+                        <div class="d-flex align-items-center gap-1.5 fw-bold mb-1">
+                            <i class="bi bi-laptop fs-5 text-primary"></i>
+                            <span>Laptop Screen Monitoring Rules:</span>
+                        </div>
+                        <ul class="mb-1 ps-3 small" style="line-height: 1.45;">
+                            <li><strong>Looking at Laptop Screen is Safe:</strong> You are free to read the questions on the right and view your webcam on the left.</li>
+                            <li><strong>Smart Eye Calibration:</strong> Look naturally at your laptop screen and click <strong>"Calibrate My Screen"</strong> if your chair or laptop angle changes.</li>
+                            <li><strong>Look-Away Violations:</strong> Looking away from your laptop (to the left/right room, down at your lap/phone, or up at ceiling) triggers a warning.</li>
+                            <li><strong>Anti-Flicker Protection:</strong> Glancing back to the screen for a split second does not wipe look-away debt.</li>
+                            <li><strong>Tab Switching:</strong> Minimizing the window or switching browser tabs is strictly flagged as cheating.</li>
+                            <li><strong>Termination Limit:</strong> Reaching <strong>{{ max_violations }} warnings</strong> automatically closes this interview.</li>
+                        </ul>
+                    </div>
+
+                    <div class="d-flex justify-content-between align-items-center gap-2">
+                        <button class="btn btn-outline-primary btn-sm w-100 fw-semibold" id="calibrateGazeBtn" type="button" title="Look naturally at your laptop screen and click to calibrate your neutral gaze">
+                            <i class="bi bi-crosshair me-1"></i> Calibrate My Screen
+                        </button>
+                        <button class="btn btn-outline-danger btn-sm text-nowrap" id="simulateLookAwayBtn" title="Test look-away detection or press 'L'">
+                            <i class="bi bi-bug me-1"></i> Test Look-Away
+                        </button>
+                        <form method="POST" action="{{ url_for('reset_interview_session', session_id=interview.id) }}" class="m-0">
+                            <button type="submit" class="btn btn-outline-secondary btn-sm" title="Reset warnings to 0">
+                                <i class="bi bi-arrow-counterclockwise"></i> Reset
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Live Screen Share Proctoring Card -->
+            <div class="screen-share-card mb-4">
+                <div class="p-3 bg-dark d-flex justify-content-between align-items-center border-bottom border-secondary">
+                    <div class="d-flex align-items-center gap-2">
+                        <i class="bi bi-display text-primary fs-5"></i>
+                        <span class="fw-bold small text-white">Live Screen Share Monitor</span>
+                    </div>
+                    <span class="badge bg-danger-subtle text-danger border border-danger-subtle" id="screenShareBadge">
+                        <i class="bi bi-x-circle me-1"></i> Screen Share Required
+                    </span>
+                </div>
+
+                <div class="screen-share-wrapper">
+                    <video id="screenShareVideo" autoplay playsinline muted class="d-none"></video>
+                    
+                    <div id="screenSharePrompt" class="text-center p-4 text-white-50">
+                        <i class="bi bi-display-fill fs-1 text-secondary mb-2 d-block"></i>
+                        <h6 class="text-white fw-bold mb-1">Candidate Screen Share Required</h6>
+                        <p class="small text-muted mb-3" style="max-width: 320px; margin: 0 auto;">
+                            Continuous screen sharing is required during this interview to verify integrity.
+                        </p>
+                        <button class="btn btn-primary btn-sm fw-bold px-4 py-2 shadow-sm" id="startScreenShareBtn" type="button">
+                            <i class="bi bi-display me-1"></i> Start Screen Share
+                        </button>
+                    </div>
+
+                    <div id="screenLiveBadge" class="position-absolute top-0 start-0 m-2 badge bg-success-subtle text-success border border-success d-none">
+                        <span class="spinner-grow spinner-grow-sm text-success me-1" role="status" style="width: 8px; height: 8px;"></span> Live Screen Active
+                    </div>
+                </div>
+
+                <div class="p-2.5 bg-dark d-flex justify-content-between align-items-center border-top border-secondary small">
+                    <span class="text-white-50 small" id="screenShareInfoText">Screen feed is monitored for unauthorized aids.</span>
+                    <button class="btn btn-outline-danger btn-sm py-1 px-2.5 d-none" id="stopScreenShareBtn" type="button">
+                        <i class="bi bi-stop-circle me-1"></i> Stop Sharing
+                    </button>
+                </div>
+            </div>
+
+
+            <!-- Live Look-Away Violations Audit Card -->
+            <div class="card shadow-sm border-0 rounded-3 mb-4">
+                <div class="card-header bg-white py-2.5 d-flex justify-content-between align-items-center">
+                    <span class="fw-bold small text-dark"><i class="bi bi-clock-history me-1 text-danger"></i> Session Warning History</span>
+                    <span class="badge bg-danger rounded-pill">{{ interview.violations|length }} Events</span>
+                </div>
+                <div class="card-body p-2" style="max-height: 250px; overflow-y: auto;">
+                    <ul class="list-group list-group-flush small" id="liveViolationsList">
+                        {% if interview.violations %}
+                            {% for v in interview.violations %}
+                            <li class="list-group-item d-flex justify-content-between align-items-center py-2 px-3 border-danger-subtle bg-danger-subtle text-danger-emphasis mb-1 rounded">
+                                <div>
+                                    <strong>Warning #{{ v.violation_number }}:</strong> {{ v.description }}
+                                </div>
+                                <span class="badge bg-danger">{{ v.timestamp.strftime('%H:%M:%S') }}</span>
+                            </li>
+                            {% endfor %}
+                        {% else %}
+                            <li class="text-center text-muted py-3" id="emptyViolationsMsg">
+                                <i class="bi bi-shield-check text-success fs-4 d-block mb-1"></i>
+                                No look-away warnings recorded yet. Excellent focus!
+                            </li>
+                        {% endif %}
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <!-- Right: Technical & Behavioral Interview Questions (Admin Controlled) -->
+        <div class="col-lg-7">
+            <!-- Header with Question Controls & Role Indicator -->
+            <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+                <div>
+                    <h5 class="fw-bold text-dark mb-0 d-flex align-items-center gap-2">
+                        <i class="bi bi-file-earmark-code text-primary"></i> Technical Assessment
+                    </h5>
+                    <small class="text-muted" id="questionControlSubtitle">Admin-directed technical evaluation</small>
+                </div>
+                
+                <!-- Role Status Badge & Admin Toggle Button -->
+                <div class="d-flex align-items-center gap-2">
+                    <span id="roleIndicatorBadge" class="badge {% if is_admin %}bg-success-subtle text-success border border-success{% else %}bg-secondary-subtle text-secondary border border-secondary-subtle{% endif %} py-2 px-3 fw-semibold">
+                        <i class="bi {% if is_admin %}bi-shield-check text-success{% else %}bi-lock-fill text-muted{% endif %} me-1" id="roleIndicatorIcon"></i>
+                        <span id="roleIndicatorText">{% if is_admin %}Interviewer / Admin Active{% else %}Only Admin Can Change Question{% endif %}</span>
+                    </span>
+                    
+                    <button class="btn btn-sm {% if is_admin %}btn-outline-danger{% else %}btn-outline-dark{% endif %} fw-semibold py-1.5 px-3" id="adminModeBtn" type="button">
+                        <i class="bi {% if is_admin %}bi-box-arrow-right{% else %}bi-shield-lock-fill text-primary{% endif %} me-1" id="adminModeBtnIcon"></i>
+                        <span id="adminModeBtnText">{% if is_admin %}Exit Admin{% else %}Admin Mode{% endif %}</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Admin Live Question Controller Bar -->
+            <div id="adminQuestionControlBar" class="card shadow-sm border-primary rounded-3 mb-4 {% if not is_admin %}d-none{% endif %}" style="background: linear-gradient(135deg, #f0fdf4 0%, #e0f2fe 100%);">
+                <div class="card-body p-3">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <div class="small fw-bold text-primary text-uppercase d-flex align-items-center gap-1">
+                            <i class="bi bi-sliders fs-6"></i> Interviewer Question Control Panel
+                        </div>
+                        <span class="badge bg-primary text-white small">Admin Powers Active</span>
+                    </div>
+
+                    <div class="row g-2 align-items-center">
+                        <div class="col-md-6 col-12">
+                            <label class="form-label small text-muted mb-1 fw-semibold">Change Active Question:</label>
+                            <select id="adminQuestionSelect" class="form-select form-select-sm border-primary shadow-sm fw-semibold">
+                                {% for q in questions %}
+                                <option value="{{ q.id }}" {% if current_question and current_question.id == q.id %}selected{% endif %}>
+                                    Question {{ loop.index }}: {{ q.title }}
+                                </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-6 col-12 d-flex align-items-end gap-1 flex-wrap">
+                            <button type="button" class="btn btn-primary btn-sm fw-bold flex-grow-1" id="adminApplyQuestionBtn">
+                                <i class="bi bi-broadcast me-1"></i> Push Question
+                            </button>
+                            <button type="button" class="btn btn-outline-primary btn-sm" id="adminPrevQuestionBtn" title="Previous Question">
+                                <i class="bi bi-chevron-left"></i> Prev
+                            </button>
+                            <button type="button" class="btn btn-outline-primary btn-sm" id="adminNextQuestionBtn" title="Next Question">
+                                Next <i class="bi bi-chevron-right"></i>
+                            </button>
+                            <button type="button" class="btn btn-success btn-sm" id="adminAddQuestionBtn" title="Add New Question">
+                                <i class="bi bi-plus-lg"></i> Add
+                            </button>
+                        </div>
+                    </div>
+                    <div class="small text-muted mt-2 d-flex align-items-center gap-1">
+                        <i class="bi bi-info-circle text-primary"></i> 
+                        <span>Changing the question here instantly updates the candidate's active display in real-time.</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Candidate Protection Notice when in Candidate Mode -->
+            <div id="candidateQuestionNotice" class="alert alert-light border shadow-sm py-2 px-3 mb-3 d-flex align-items-center justify-content-between {% if is_admin %}d-none{% endif %}">
+                <div class="d-flex align-items-center gap-2">
+                    <i class="bi bi-shield-lock-fill text-primary fs-5"></i>
+                    <div class="small text-muted">
+                        <strong>Questions are controlled by your interviewer.</strong> Only the administrator can change, assign, or advance questions.
+                    </div>
+                </div>
+                <button class="btn btn-sm btn-outline-secondary py-0.5 px-2" type="button" onclick="showCandidateLockedAlert()">
+                    <i class="bi bi-lock-fill text-warning me-1"></i> Locked
+                </button>
+            </div>
+
+            <!-- Active Question Display Card -->
+            <div class="question-card p-4 shadow-sm border rounded-4 mb-4 bg-white position-relative" id="activeQuestionCard">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <div class="d-flex align-items-center gap-2 flex-wrap">
+                        <span class="badge bg-primary text-white fw-bold px-3 py-1.5" id="activeQuestionBadge">
+                            Question <span id="activeQuestionNumber">{{ current_question.order_num if current_question else 1 }}</span> of <span id="totalQuestionsCount">{{ questions|length }}</span>
+                        </span>
+                        <span class="badge bg-info-subtle text-info-emphasis border border-info-subtle fw-semibold" id="activeQuestionCategory">
+                            {{ current_question.category if current_question else 'Technical' }}
+                        </span>
+                        <span class="badge bg-light text-muted border small d-none" id="activeQuestionSyncNotice">
+                            <span class="spinner-border spinner-border-sm text-primary me-1" style="width: 10px; height: 10px;"></span> Syncing...
+                        </span>
+                    </div>
+                    
+                    <div class="d-flex align-items-center gap-2">
+                        <!-- Admin Edit Question Button -->
+                        <button type="button" class="btn btn-outline-secondary btn-sm py-0.5 px-2 {% if not is_admin %}d-none{% endif %}" id="adminEditCurrentBtn">
+                            <i class="bi bi-pencil-square me-1"></i> Edit Question
+                        </button>
+                        <span class="small text-muted font-monospace" id="saveStatusText">
+                            <i class="bi bi-cloud-check text-success me-1"></i> Saved
+                        </span>
+                    </div>
+                </div>
+
+                <h5 class="fw-bold text-dark mb-2" id="activeQuestionTitle">
+                    {{ current_question.title if current_question else 'Loading question...' }}
+                </h5>
+                <p class="text-secondary mb-4 fs-6 lh-base" id="activeQuestionText" style="white-space: pre-wrap;">
+                    {{ current_question.question if current_question else '' }}
+                </p>
+
+                <!-- Candidate Answer Box -->
+                <div class="mb-2">
+                    <div class="d-flex justify-content-between align-items-center mb-1">
+                        <label for="candidateAnswerInput" class="form-label small text-muted fw-bold mb-0">
+                            <i class="bi bi-terminal me-1 text-primary"></i> Your Solution / Code / Explanation:
+                        </label>
+                        <small class="text-muted" id="wordCountText">0 words</small>
+                    </div>
+                    <textarea class="form-control question-answer-box font-monospace" id="candidateAnswerInput" rows="7" placeholder="Type your detailed solution directly here while keeping eyes focused on the laptop screen..."></textarea>
+                </div>
+            </div>
+
+            <!-- Question Bank Curriculum Overview -->
+            <div class="card shadow-sm border-0 rounded-3 mb-4">
+                <div class="card-header bg-white py-2.5 d-flex justify-content-between align-items-center">
+                    <span class="fw-bold small text-dark"><i class="bi bi-collection me-1 text-primary"></i> Question Curriculum Bank (<span id="bankListCount">{{ questions|length }}</span>)</span>
+                    <small class="text-muted"><i class="bi bi-lock-fill text-muted me-1"></i>Only Admin can change active question</small>
+                </div>
+                <div class="list-group list-group-flush small" id="questionsBankList">
+                    {% for q in questions %}
+                    <div class="list-group-item d-flex justify-content-between align-items-center py-2.5 px-3 question-list-row {% if current_question and current_question.id == q.id %}bg-primary-subtle text-primary-emphasis border-start border-primary border-3{% endif %}" data-qid="{{ q.id }}">
+                        <div class="d-flex align-items-center gap-2 flex-grow-1 me-2 text-truncate">
+                            <span class="badge bg-light text-dark border font-monospace">Q{{ loop.index }}</span>
+                            <strong class="text-truncate">{{ q.title }}</strong>
+                            <span class="badge bg-secondary-subtle text-secondary small d-none d-md-inline">{{ q.category }}</span>
+                        </div>
+                        <div class="d-flex align-items-center gap-1">
+                            <span class="badge bg-primary text-white {% if not (current_question and current_question.id == q.id) %}d-none{% endif %} active-pill" id="activePill-{{ q.id }}">
+                                <i class="bi bi-eye-fill me-1"></i> Active
+                            </span>
+                            <!-- Non-active actions -->
+                            <button type="button" class="btn btn-sm btn-outline-primary py-0.5 px-2 admin-only-action {% if not is_admin or (current_question and current_question.id == q.id) %}d-none{% endif %}" onclick="adminSelectQuestion({{ q.id }})" id="makeActiveBtn-{{ q.id }}">
+                                <i class="bi bi-broadcast me-1"></i> Set Active
+                            </button>
+                            <button type="button" class="btn btn-sm btn-light text-muted py-0.5 px-2 candidate-locked-btn {% if is_admin or (current_question and current_question.id == q.id) %}d-none{% endif %}" onclick="showCandidateLockedAlert()" id="lockedBtn-{{ q.id }}">
+                                <i class="bi bi-lock-fill"></i> Locked
+                            </button>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <div class="text-end mb-5">
+                <button class="btn btn-success btn-lg fw-bold px-5 shadow" onclick="document.getElementById('submitInterviewBtn').click();">
+                    <i class="bi bi-send-check me-1"></i> Finalize & Submit Interview
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ============================================================== -->
+<!-- ADMIN PASSCODE AUTHENTICATION MODAL -->
+<!-- ============================================================== -->
+<div class="modal fade" id="adminPasscodeModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content rounded-4 border-0 shadow">
+            <div class="modal-header bg-dark text-white">
+                <h5 class="modal-title fw-bold">
+                    <i class="bi bi-shield-lock-fill text-warning me-2"></i>Interviewer / Admin Access
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-4">
+                <p class="text-muted small mb-3">
+                    Only administrators and interviewers are authorized to change or advance questions. Enter the admin passcode to unlock full question control:
+                </p>
+                <div class="mb-3">
+                    <label for="adminPasscodeInput" class="form-label small fw-bold">Admin Passcode</label>
+                    <input type="password" class="form-control form-control-lg" id="adminPasscodeInput" placeholder="Enter admin passcode (default: admin123)" autofocus>
+                    <small class="text-muted">Default system passcode: <code class="fw-bold">admin123</code></small>
+                </div>
+                <div id="adminAuthAlert" class="alert alert-danger py-2 small d-none"></div>
+            </div>
+            <div class="modal-footer bg-light">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary fw-bold px-4" id="submitAdminPasscodeBtn">
+                    <i class="bi bi-unlock-fill me-1"></i> Unlock Admin Mode
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ============================================================== -->
+<!-- CANDIDATE QUESTION LOCKED ACCESS DENIED MODAL -->
+<!-- ============================================================== -->
+<div class="modal fade" id="candidateLockedModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content rounded-4 border-0 shadow text-center p-4">
+            <div class="text-danger mb-3">
+                <i class="bi bi-lock-fill display-4"></i>
+            </div>
+            <h4 class="fw-bold text-dark mb-2">Question Locked</h4>
+            <div class="alert alert-warning py-2 px-3 small text-start mb-3">
+                <i class="bi bi-exclamation-triangle-fill me-1 text-warning"></i>
+                <strong>Access Restricted:</strong> Only the Administrator / Interviewer can change or advance the question.
+            </div>
+            <p class="text-muted small mb-4">
+                In strict accordance with proctoring integrity rules, candidates are not permitted to switch, choose, or modify interview questions. Please continue working on the active question currently assigned to you on screen.
+            </p>
+            <div class="d-flex justify-content-center gap-2">
+                <button type="button" class="btn btn-dark fw-bold px-4 py-2" data-bs-dismiss="modal">
+                    I Understand
+                </button>
+                <button type="button" class="btn btn-outline-primary fw-semibold px-3 py-2" onclick="bootstrap.Modal.getInstance(document.getElementById('candidateLockedModal')).hide(); promptAdminLogin();">
+                    <i class="bi bi-key me-1"></i> I am an Admin / Interviewer
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ============================================================== -->
+<!-- ADMIN ADD NEW QUESTION MODAL -->
+<!-- ============================================================== -->
+<div class="modal fade" id="adminAddQuestionModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content rounded-4 border-0 shadow">
+            <div class="modal-header bg-success text-white">
+                <h5 class="modal-title fw-bold">
+                    <i class="bi bi-plus-circle-fill me-2"></i>Add New Interview Question (Admin)
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-4">
+                <div class="mb-3">
+                    <label class="form-label fw-bold small">Question Title / Topic</label>
+                    <input type="text" class="form-control" id="newQuestionTitle" placeholder="e.g. Distributed Caching & Redis Eviction Policies">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label fw-bold small">Category</label>
+                    <select class="form-select" id="newQuestionCategory">
+                        <option value="Technical">Technical</option>
+                        <option value="System Design">System Design</option>
+                        <option value="Computer Science">Computer Science</option>
+                        <option value="Algorithms">Algorithms</option>
+                        <option value="Behavioral">Behavioral</option>
+                    </select>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label fw-bold small">Detailed Question / Problem Statement</label>
+                    <textarea class="form-control font-monospace" id="newQuestionText" rows="5" placeholder="Enter complete question details, constraints, and requirements..."></textarea>
+                </div>
+                <div id="addQuestionError" class="alert alert-danger py-2 small d-none"></div>
+            </div>
+            <div class="modal-footer bg-light">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-success fw-bold px-4" id="saveNewQuestionBtn">
+                    <i class="bi bi-check-lg me-1"></i> Add & Set Active
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ============================================================== -->
+<!-- ADMIN EDIT QUESTION MODAL -->
+<!-- ============================================================== -->
+<div class="modal fade" id="adminEditQuestionModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content rounded-4 border-0 shadow">
+            <div class="modal-header bg-dark text-white">
+                <h5 class="modal-title fw-bold">
+                    <i class="bi bi-pencil-square text-primary me-2"></i>Edit Question (Admin)
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-4">
+                <input type="hidden" id="editQuestionId">
+                <div class="mb-3">
+                    <label class="form-label fw-bold small">Question Title</label>
+                    <input type="text" class="form-control" id="editQuestionTitle">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label fw-bold small">Category</label>
+                    <input type="text" class="form-control" id="editQuestionCategory">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label fw-bold small">Question Prompt</label>
+                    <textarea class="form-control font-monospace" id="editQuestionText" rows="5"></textarea>
+                </div>
+                <div id="editQuestionError" class="alert alert-danger py-2 small d-none"></div>
+            </div>
+            <div class="modal-footer bg-light">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary fw-bold px-4" id="saveEditQuestionBtn">
+                    <i class="bi bi-save me-1"></i> Save Changes
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ============================================================== -->
+<!-- UNCLOSABLE AUTOMATIC TERMINATION OVERLAY (15 VIOLATIONS LIMIT) -->
+<!-- ============================================================== -->
+<div id="terminationOverlay" class="termination-overlay {% if interview.status != 'terminated' %}d-none{% endif %}">
+    <div class="termination-modal-card">
+        <div class="termination-icon">
+            <i class="bi bi-x-octagon-fill"></i>
+        </div>
+        <h2 class="text-danger fw-bold mb-2">INTERVIEW TERMINATED AUTOMATICALLY</h2>
+        <p class="lead text-dark fw-semibold mb-3">
+            Exceeded Maximum Allowable Off-Screen Warnings (<span id="finalViolationCount">{{ interview.violations_count }}</span>/{{ max_violations }})
+        </p>
+
+        <div class="alert alert-danger text-start py-3 px-4 mb-4">
+            <div class="mb-1"><strong>Closure Reason:</strong> <span id="terminationReasonText">{{ interview.termination_reason or 'Candidate did not look at laptop screen more than 15 times.' }}</span></div>
+            <div><strong>Termination Timestamp:</strong> <span id="terminationTimeText">{{ interview.ended_at.strftime('%H:%M:%S') if interview.ended_at else 'Just now' }}</span></div>
+        </div>
+
+        <p class="text-muted small mb-4">
+            Your live interview session has been permanently closed and all inputs are locked. A comprehensive proctoring log with video eye-tracking timestamps has been automatically submitted to the hiring committee.
+        </p>
+
+        <div class="d-flex justify-content-center flex-wrap gap-3">
+            <form method="POST" action="{{ url_for('reset_interview_session', session_id=interview.id) }}" class="m-0">
+                <button type="submit" class="btn btn-primary btn-lg fw-bold px-4 py-2.5">
+                    <i class="bi bi-arrow-counterclockwise me-1"></i> Reset & Return to Home Screen
+                </button>
+            </form>
+            <a href="{{ url_for('index') }}" class="btn btn-outline-dark btn-lg fw-bold px-4 py-2.5">
+                <i class="bi bi-house-door-fill me-1"></i> Home Screen
+            </a>
+            <a href="{{ url_for('proctor_dashboard') }}" class="btn btn-outline-danger btn-lg fw-bold px-4 py-2.5">
+                <i class="bi bi-speedometer2 me-1"></i> View Proctor Audit Log
+            </a>
+        </div>
+    </div>
+</div>
+
+<!-- SUCCESSFUL COMPLETION OVERLAY -->
+<div id="completionOverlay" class="termination-overlay d-none">
+    <div class="completion-modal-card">
+        <div class="text-success fs-1 mb-2">
+            <i class="bi bi-patch-check-fill" style="font-size: 4rem;"></i>
+        </div>
+        <h2 class="text-success fw-bold mb-2">Interview Submitted Successfully!</h2>
+        <p class="lead text-muted mb-4">
+            Your interview solutions and proctoring integrity report have been safely transmitted.
+        </p>
+        <div class="d-flex justify-content-center flex-wrap gap-3">
+            <a href="{{ url_for('index') }}" class="btn btn-primary btn-lg fw-bold px-4 py-2.5">
+                <i class="bi bi-house-door-fill me-1"></i> Return to Home Screen
+            </a>
+            <a href="{{ url_for('interview_start') }}" class="btn btn-outline-success btn-lg fw-bold px-4 py-2.5">
+                <i class="bi bi-person-plus-fill me-1"></i> Start New Interview
+            </a>
+            <a href="{{ url_for('proctor_dashboard') }}" class="btn btn-outline-dark btn-lg fw-bold px-4 py-2.5">
+                <i class="bi bi-speedometer2 me-1"></i> Proctor Dashboard
+            </a>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<!-- MediaPipe CDN Dependencies -->
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/face_mesh.js" crossorigin="anonymous"></script>
+
+<!-- Interview Eye-Tracking Engine -->
+<script src="{{ url_for('static', filename='js/interview_tracker.js') }}"></script>
+
+<script>
+// ==============================================================
+// QUESTION MANAGEMENT CLIENT CONTROLLER
+// STRICT ENFORCEMENT: ONLY ADMIN CAN CHANGE THE QUESTION
+// ==============================================================
+(function() {
+    const sessionId = {{ interview.id }};
+    let isAdmin = {{ 'true' if is_admin else 'false' }};
+    let currentQuestionId = {{ current_question.id if current_question else 1 }};
+    let candidateAnswers = {};
+    
+    // Load existing answers from localStorage
+    try {
+        const stored = localStorage.getItem('interview_answers_' + sessionId);
+        if (stored) {
+            candidateAnswers = JSON.parse(stored);
+        }
+    } catch(e) {
+        candidateAnswers = {};
+    }
+
+    // Populate current question's saved answer if any
+    const answerInput = document.getElementById('candidateAnswerInput');
+    if (answerInput) {
+        if (candidateAnswers[currentQuestionId]) {
+            answerInput.value = candidateAnswers[currentQuestionId];
+        }
+        updateWordCount();
+        
+        answerInput.addEventListener('input', () => {
+            candidateAnswers[currentQuestionId] = answerInput.value;
+            try {
+                localStorage.setItem('interview_answers_' + sessionId, JSON.stringify(candidateAnswers));
+            } catch(e){}
+            updateWordCount();
+            
+            // Debounced autosave sync
+            clearTimeout(window.answerAutosaveTimer);
+            window.answerAutosaveTimer = setTimeout(() => {
+                syncAnswersToServer();
+            }, 1000);
+        });
+    }
+
+    function updateWordCount() {
+        if (!answerInput) return;
+        const text = answerInput.value.trim();
+        const count = text ? text.split(/\s+/).length : 0;
+        const wc = document.getElementById('wordCountText');
+        if (wc) wc.textContent = count + ' words';
+    }
+
+    function syncAnswersToServer() {
+        const statusEl = document.getElementById('saveStatusText');
+        if (statusEl) statusEl.innerHTML = '<span class="text-primary"><i class="bi bi-arrow-repeat spin me-1"></i> Saving...</span>';
+        
+        fetch(`/api/interview/${sessionId}/submit`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ answers: candidateAnswers })
+        }).then(() => {
+            if (statusEl) statusEl.innerHTML = '<i class="bi bi-cloud-check text-success me-1"></i> Saved';
+        }).catch(() => {
+            if (statusEl) statusEl.innerHTML = '<i class="bi bi-cloud-slash text-warning me-1"></i> Saved locally';
+        });
+    }
+
+    // Setup Candidate Submit Interview button
+    const submitBtn = document.getElementById('submitInterviewBtn');
+    if (submitBtn) {
+        submitBtn.addEventListener('click', () => {
+            if (confirm('Are you ready to finalize and submit your interview solutions?')) {
+                // Ensure current answer is synced
+                if (answerInput) candidateAnswers[currentQuestionId] = answerInput.value;
+                
+                fetch(`/api/interview/${sessionId}/submit`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ answers: candidateAnswers })
+                }).then(res => res.json()).then(data => {
+                    const completionOverlay = document.getElementById('completionOverlay');
+                    if (completionOverlay) completionOverlay.classList.remove('d-none');
+                }).catch(() => {
+                    alert('Submission received.');
+                    window.location.href = "{{ url_for('index') }}";
+                });
+            }
+        });
+    }
+
+    // ==========================================
+    // CANDIDATE PROTECTION: LOCKED ALERT
+    // ==========================================
+    window.showCandidateLockedAlert = function() {
+        const modal = new bootstrap.Modal(document.getElementById('candidateLockedModal'));
+        modal.show();
+    };
+
+    window.promptAdminLogin = function() {
+        const modal = new bootstrap.Modal(document.getElementById('adminPasscodeModal'));
+        modal.show();
+        setTimeout(() => {
+            const input = document.getElementById('adminPasscodeInput');
+            if (input) input.focus();
+        }, 300);
+    };
+
+    // ==========================================
+    // ADMIN AUTHENTICATION
+    // ==========================================
+    const adminModeBtn = document.getElementById('adminModeBtn');
+    if (adminModeBtn) {
+        adminModeBtn.addEventListener('click', () => {
+            if (isAdmin) {
+                // Exit Admin
+                if (confirm('Exit Admin / Interviewer mode and return to candidate view?')) {
+                    fetch('/api/admin/logout', { method: 'POST' })
+                        .then(res => res.json())
+                        .then(() => {
+                            isAdmin = false;
+                            updateAdminUIState();
+                        });
+                }
+            } else {
+                promptAdminLogin();
+            }
+        });
+    }
+
+    const submitAdminPasscodeBtn = document.getElementById('submitAdminPasscodeBtn');
+    const adminPasscodeInput = document.getElementById('adminPasscodeInput');
+    const adminAuthAlert = document.getElementById('adminAuthAlert');
+
+    if (submitAdminPasscodeBtn && adminPasscodeInput) {
+        const handleAdminLogin = () => {
+            const passcode = adminPasscodeInput.value.trim();
+            if (!passcode) {
+                adminAuthAlert.textContent = 'Please enter the admin passcode.';
+                adminAuthAlert.classList.remove('d-none');
+                return;
+            }
+            fetch('/api/admin/login', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ passcode: passcode })
+            }).then(res => res.json()).then(data => {
+                if (data.success) {
+                    isAdmin = true;
+                    bootstrap.Modal.getInstance(document.getElementById('adminPasscodeModal')).hide();
+                    adminPasscodeInput.value = '';
+                    adminAuthAlert.classList.add('d-none');
+                    updateAdminUIState();
+                } else {
+                    adminAuthAlert.textContent = data.message || 'Incorrect passcode. Access denied.';
+                    adminAuthAlert.classList.remove('d-none');
+                }
+            }).catch(() => {
+                adminAuthAlert.textContent = 'Server connection error.';
+                adminAuthAlert.classList.remove('d-none');
+            });
+        };
+
+        submitAdminPasscodeBtn.addEventListener('click', handleAdminLogin);
+        adminPasscodeInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') handleAdminLogin();
+        });
+    }
+
+    function updateAdminUIState() {
+        const roleBadge = document.getElementById('roleIndicatorBadge');
+        const roleText = document.getElementById('roleIndicatorText');
+        const roleIcon = document.getElementById('roleIndicatorIcon');
+        const adminBtn = document.getElementById('adminModeBtn');
+        const adminBtnText = document.getElementById('adminModeBtnText');
+        const adminBtnIcon = document.getElementById('adminModeBtnIcon');
+        const controlBar = document.getElementById('adminQuestionControlBar');
+        const notice = document.getElementById('candidateQuestionNotice');
+        const editBtn = document.getElementById('adminEditCurrentBtn');
+
+        if (isAdmin) {
+            if (roleBadge) {
+                roleBadge.className = 'badge bg-success-subtle text-success border border-success py-2 px-3 fw-semibold';
+            }
+            if (roleText) roleText.textContent = 'Interviewer / Admin Active';
+            if (roleIcon) roleIcon.className = 'bi bi-shield-check text-success me-1';
+            
+            if (adminBtn) adminBtn.className = 'btn btn-sm btn-outline-danger fw-semibold py-1.5 px-3';
+            if (adminBtnText) adminBtnText.textContent = 'Exit Admin';
+            if (adminBtnIcon) adminBtnIcon.className = 'bi bi-box-arrow-right me-1';
+
+            if (controlBar) controlBar.classList.remove('d-none');
+            if (notice) notice.classList.add('d-none');
+            if (editBtn) editBtn.classList.remove('d-none');
+
+            document.querySelectorAll('.admin-only-action').forEach(el => el.classList.remove('d-none'));
+            document.querySelectorAll('.candidate-locked-btn').forEach(el => el.classList.add('d-none'));
+        } else {
+            if (roleBadge) {
+                roleBadge.className = 'badge bg-secondary-subtle text-secondary border border-secondary-subtle py-2 px-3 fw-semibold';
+            }
+            if (roleText) roleText.textContent = 'Only Admin Can Change Question';
+            if (roleIcon) roleIcon.className = 'bi bi-lock-fill text-muted me-1';
+
+            if (adminBtn) adminBtn.className = 'btn btn-sm btn-outline-dark fw-semibold py-1.5 px-3';
+            if (adminBtnText) adminBtnText.textContent = 'Admin Mode';
+            if (adminBtnIcon) adminBtnIcon.className = 'bi bi-shield-lock-fill text-primary me-1';
+
+            if (controlBar) controlBar.classList.add('d-none');
+            if (notice) notice.classList.remove('d-none');
+            if (editBtn) editBtn.classList.add('d-none');
+
+            document.querySelectorAll('.admin-only-action').forEach(el => el.classList.add('d-none'));
+            document.querySelectorAll('.candidate-locked-btn').forEach(el => el.classList.remove('d-none'));
+        }
+    }
+
+    // ==========================================
+    // QUESTION SWITCHING & ADMIN DISPATCH
+    // ==========================================
+    window.adminSelectQuestion = function(targetQid) {
+        if (!isAdmin) {
+            showCandidateLockedAlert();
+            return;
+        }
+        changeQuestionRequest({ question_id: targetQid });
+    };
+
+    function changeQuestionRequest(payload) {
+        fetch(`/api/interview/${sessionId}/change_question`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        }).then(res => {
+            if (res.status === 403) {
+                showCandidateLockedAlert();
+                throw new Error('Only admin can change the question');
+            }
+            return res.json();
+        }).then(data => {
+            if (data.success && data.question) {
+                applyNewQuestion(data.question);
+            } else if (data.error) {
+                alert(data.error);
+            }
+        }).catch(err => {
+            console.warn('Change question error:', err);
+        });
+    }
+
+    // Admin toolbar button hooks
+    const applyBtn = document.getElementById('adminApplyQuestionBtn');
+    const selectEl = document.getElementById('adminQuestionSelect');
+    if (applyBtn && selectEl) {
+        applyBtn.addEventListener('click', () => {
+            changeQuestionRequest({ question_id: selectEl.value });
+        });
+    }
+
+    const prevBtn = document.getElementById('adminPrevQuestionBtn');
+    if (prevBtn) {
+        prevBtn.addEventListener('click', () => {
+            changeQuestionRequest({ direction: 'prev' });
+        });
+    }
+
+    const nextBtn = document.getElementById('adminNextQuestionBtn');
+    if (nextBtn) {
+        nextBtn.addEventListener('click', () => {
+            changeQuestionRequest({ direction: 'next' });
+        });
+    }
+
+    // Apply new question to active view
+    function applyNewQuestion(q) {
+        if (!q || q.id === currentQuestionId) return;
+
+        // Save current answer first
+        if (answerInput) {
+            candidateAnswers[currentQuestionId] = answerInput.value;
+            try {
+                localStorage.setItem('interview_answers_' + sessionId, JSON.stringify(candidateAnswers));
+            } catch(e){}
+        }
+
+        currentQuestionId = q.id;
+
+        // Update active question UI elements
+        const titleEl = document.getElementById('activeQuestionTitle');
+        const textEl = document.getElementById('activeQuestionText');
+        const numEl = document.getElementById('activeQuestionNumber');
+        const catEl = document.getElementById('activeQuestionCategory');
+        const cardEl = document.getElementById('activeQuestionCard');
+
+        if (titleEl) titleEl.textContent = q.title;
+        if (textEl) textEl.textContent = q.question;
+        if (numEl) numEl.textContent = q.order_num || q.id;
+        if (catEl) catEl.textContent = q.category || 'Technical';
+
+        // Load saved answer for new question
+        if (answerInput) {
+            answerInput.value = candidateAnswers[currentQuestionId] || '';
+            updateWordCount();
+        }
+
+        // Update select element if present
+        if (selectEl) {
+            selectEl.value = q.id;
+        }
+
+        // Highlight active question row in list
+        document.querySelectorAll('.question-list-row').forEach(row => {
+            const qid = parseInt(row.dataset.qid);
+            const activePill = document.getElementById(`activePill-${qid}`);
+            const makeActiveBtn = document.getElementById(`makeActiveBtn-${qid}`);
+            const lockedBtn = document.getElementById(`lockedBtn-${qid}`);
+
+            if (qid === q.id) {
+                row.classList.add('bg-primary-subtle', 'text-primary-emphasis', 'border-start', 'border-primary', 'border-3');
+                if (activePill) activePill.classList.remove('d-none');
+                if (makeActiveBtn) makeActiveBtn.classList.add('d-none');
+                if (lockedBtn) lockedBtn.classList.add('d-none');
+            } else {
+                row.classList.remove('bg-primary-subtle', 'text-primary-emphasis', 'border-start', 'border-primary', 'border-3');
+                if (activePill) activePill.classList.add('d-none');
+                if (makeActiveBtn && isAdmin) makeActiveBtn.classList.remove('d-none');
+                if (lockedBtn && !isAdmin) lockedBtn.classList.remove('d-none');
+            }
+        });
+
+        // Flash visual highlight animation on question card
+        if (cardEl) {
+            cardEl.style.transition = 'box-shadow 0.3s ease, border-color 0.3s ease';
+            cardEl.style.boxShadow = '0 0 0 4px rgba(13, 110, 253, 0.3)';
+            cardEl.style.borderColor = '#0d6efd';
+            setTimeout(() => {
+                cardEl.style.boxShadow = '';
+                cardEl.style.borderColor = '';
+            }, 800);
+        }
+    }
+
+    // ==========================================
+    // REAL-TIME POLLING: SYNC QUESTION LIVE
+    // ==========================================
+    setInterval(() => {
+        fetch(`/api/interview/${sessionId}/current_question`)
+            .then(res => res.json())
+            .then(data => {
+                if (data.current_question && data.current_question.id !== currentQuestionId) {
+                    applyNewQuestion(data.current_question);
+                }
+                // Update Admin status if changed in backend
+                if (typeof data.is_admin === 'boolean' && data.is_admin !== isAdmin) {
+                    isAdmin = data.is_admin;
+                    updateAdminUIState();
+                }
+            })
+            .catch(() => {});
+    }, 2500);
+
+    // ==========================================
+    // ADMIN ADD QUESTION MODAL HOOKS
+    // ==========================================
+    const addQBtn = document.getElementById('adminAddQuestionBtn');
+    if (addQBtn) {
+        addQBtn.addEventListener('click', () => {
+            const modal = new bootstrap.Modal(document.getElementById('adminAddQuestionModal'));
+            modal.show();
+        });
+    }
+
+    const saveNewQBtn = document.getElementById('saveNewQuestionBtn');
+    if (saveNewQBtn) {
+        saveNewQBtn.addEventListener('click', () => {
+            const title = (document.getElementById('newQuestionTitle').value || '').trim();
+            const category = document.getElementById('newQuestionCategory').value;
+            const text = (document.getElementById('newQuestionText').value || '').trim();
+            const errEl = document.getElementById('addQuestionError');
+
+            if (!title || !text) {
+                if (errEl) {
+                    errEl.textContent = 'Please provide both title and question prompt.';
+                    errEl.classList.remove('d-none');
+                }
+                return;
+            }
+
+            fetch('/api/admin/questions/add', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ title, category, question: text })
+            }).then(res => res.json()).then(data => {
+                if (data.success && data.question) {
+                    bootstrap.Modal.getInstance(document.getElementById('adminAddQuestionModal')).hide();
+                    document.getElementById('newQuestionTitle').value = '';
+                    document.getElementById('newQuestionText').value = '';
+                    if (errEl) errEl.classList.add('d-none');
+                    // Automatically switch to new question
+                    changeQuestionRequest({ question_id: data.question.id });
+                    setTimeout(() => location.reload(), 400);
+                } else {
+                    if (errEl) {
+                        errEl.textContent = data.error || 'Failed to add question.';
+                        errEl.classList.remove('d-none');
+                    }
+                }
+            });
+        });
+    }
+
+    // ==========================================
+    // ADMIN EDIT QUESTION MODAL HOOKS
+    // ==========================================
+    const editCurrentBtn = document.getElementById('adminEditCurrentBtn');
+    if (editCurrentBtn) {
+        editCurrentBtn.addEventListener('click', () => {
+            document.getElementById('editQuestionId').value = currentQuestionId;
+            document.getElementById('editQuestionTitle').value = document.getElementById('activeQuestionTitle').textContent.trim();
+            document.getElementById('editQuestionCategory').value = document.getElementById('activeQuestionCategory').textContent.trim();
+            document.getElementById('editQuestionText').value = document.getElementById('activeQuestionText').textContent.trim();
+            
+            const modal = new bootstrap.Modal(document.getElementById('adminEditQuestionModal'));
+            modal.show();
+        });
+    }
+
+    const saveEditQBtn = document.getElementById('saveEditQuestionBtn');
+    if (saveEditQBtn) {
+        saveEditQBtn.addEventListener('click', () => {
+            const qid = document.getElementById('editQuestionId').value;
+            const title = (document.getElementById('editQuestionTitle').value || '').trim();
+            const category = (document.getElementById('editQuestionCategory').value || '').trim();
+            const text = (document.getElementById('editQuestionText').value || '').trim();
+            const errEl = document.getElementById('editQuestionError');
+
+            fetch(`/api/admin/questions/${qid}/edit`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ title, category, question: text })
+            }).then(res => res.json()).then(data => {
+                if (data.success && data.question) {
+                    bootstrap.Modal.getInstance(document.getElementById('adminEditQuestionModal')).hide();
+                    document.getElementById('activeQuestionTitle').textContent = data.question.title;
+                    document.getElementById('activeQuestionCategory').textContent = data.question.category;
+                    document.getElementById('activeQuestionText').textContent = data.question.question;
+                } else {
+                    if (errEl) {
+                        errEl.textContent = data.error || 'Failed to save edits.';
+                        errEl.classList.remove('d-none');
+                    }
+                }
+            });
+        });
+    }
+
+})();
+
+// Initialize Eye-Tracking AI Proctor
+document.addEventListener('DOMContentLoaded', () => {
+    window.initInterviewProctor({{ interview.id }}, {{ max_violations }});
+});
+</script>
+{% endblock %}
+

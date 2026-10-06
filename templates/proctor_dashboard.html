@@ -1,0 +1,566 @@
+{% extends "base.html" %}
+
+{% block title %}Proctor Audit Dashboard | Live Eye-Tracking Monitoring{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+            <div>
+                <h2 class="mb-1 text-dark fw-bold">Live Interview Proctoring Dashboard</h2>
+                <p class="text-muted mb-0">Automated Eye-Tracking Audit & Look-Away Violation Management (15-Limit Auto-Close Policy).</p>
+            </div>
+            <div class="d-flex gap-2">
+                <a href="{{ url_for('interview_schedule') }}" class="btn btn-primary fw-semibold shadow-sm">
+                    <i class="bi bi-calendar-plus me-1"></i> Schedule Interview & Link
+                </a>
+                <a href="{{ url_for('interview_start') }}" class="btn btn-outline-dark fw-semibold">
+                    <i class="bi bi-plus-circle me-1"></i> Start Instant Session
+                </a>
+            </div>
+        </div>
+
+        <!-- Metrics Overview KPI Cards -->
+        <div class="row g-3 mb-4">
+            <div class="col-md-2 col-sm-4">
+                <div class="card shadow-sm border-0 rounded-3 p-3 bg-white">
+                    <div class="text-muted small fw-semibold text-uppercase">Total</div>
+                    <div class="fs-3 fw-bold text-dark">{{ total_count }}</div>
+                </div>
+            </div>
+
+            <div class="col-md-2 col-sm-4">
+                <div class="card shadow-sm border-0 rounded-3 p-3 bg-white" style="border-left: 4px solid #0284c7 !important;">
+                    <div class="text-primary small fw-bold text-uppercase">Scheduled</div>
+                    <div class="fs-3 fw-bold text-primary">{{ scheduled_count }}</div>
+                </div>
+            </div>
+
+            <div class="col-md-2 col-sm-4">
+                <div class="card shadow-sm border-0 rounded-3 p-3 bg-white">
+                    <div class="text-muted small fw-semibold text-uppercase">In Progress</div>
+                    <div class="fs-3 fw-bold text-info">{{ active_count }}</div>
+                </div>
+            </div>
+
+            <div class="col-md-3 col-sm-6">
+                <div class="card shadow-sm border-0 rounded-3 p-3 bg-white" style="border-left: 4px solid #dc2626 !important;">
+                    <div class="text-danger small fw-bold text-uppercase">Terminated (15 Warnings)</div>
+                    <div class="fs-3 fw-bold text-danger">{{ terminated_count }}</div>
+                </div>
+            </div>
+
+            <div class="col-md-3 col-sm-6">
+                <div class="card shadow-sm border-0 rounded-3 p-3 bg-white">
+                    <div class="text-success small fw-semibold text-uppercase">Completed</div>
+                    <div class="fs-3 fw-bold text-success">{{ completed_count }}</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Candidate Sessions Table -->
+        <div class="card shadow-sm border-0 rounded-3 overflow-hidden">
+            <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
+                <h5 class="mb-0 fw-bold text-dark d-flex align-items-center gap-2">
+                    <i class="bi bi-eye-fill text-primary"></i> Monitored Interview Sessions
+                </h5>
+                <span class="badge bg-secondary-subtle text-secondary" id="proctorPollTime">Live auto-refresh: active</span>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Session</th>
+                                <th>Candidate</th>
+                                <th>Meeting Link / Code</th>
+                                <th>Scheduled Date & Time</th>
+                                <th>Screen Share</th>
+                                <th>Off-Center Warnings</th>
+                                <th>Status</th>
+                                <th class="text-end">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="proctorSessionsBody">
+                            {% if sessions %}
+                                {% for s in sessions %}
+                                <tr class="{% if s.status == 'terminated' %}table-danger{% endif %}">
+                                    <td><strong>#{{ s.id }}</strong></td>
+                                    <td>
+                                        <div class="fw-bold text-dark">{{ s.candidate_name }}</div>
+                                        <small class="text-muted">{{ s.candidate_email }} ({{ s.role_applied }})</small>
+                                    </td>
+                                    <td>
+                                        {% if s.meeting_code %}
+                                        <div class="d-flex align-items-center gap-1">
+                                            <span class="badge bg-light text-dark font-monospace border">{{ s.meeting_code }}</span>
+                                            <button type="button" class="btn btn-sm btn-outline-primary py-0 px-1.5" onclick="navigator.clipboard.writeText('{{ s.meeting_link or url_for('interview_join', meeting_code=s.meeting_code, _external=True) }}').then(() => alert('Meeting Link Copied!'))" title="Copy meeting link">
+                                                <i class="bi bi-clipboard"></i>
+                                            </button>
+                                        </div>
+                                        {% else %}
+                                        <span class="text-muted small">N/A</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if s.scheduled_date %}
+                                        <div class="small fw-semibold text-dark"><i class="bi bi-calendar-event me-1 text-primary"></i>{{ s.scheduled_date }}</div>
+                                        <small class="text-muted">{{ s.scheduled_time }}</small>
+                                        {% else %}
+                                        <small class="text-muted">{{ s.created_at.strftime('%Y-%m-%d %H:%M') }}</small>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if s.screen_sharing_active %}
+                                            <span class="badge bg-success-subtle text-success border border-success fw-bold">
+                                                <i class="bi bi-display me-1"></i> Live
+                                            </span>
+                                        {% else %}
+                                            <span class="badge bg-danger-subtle text-danger border border-danger-subtle fw-bold">
+                                                <i class="bi bi-display-slash me-1"></i> Off
+                                            </span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if s.violations_count >= s.max_violations %}
+                                            <span class="badge bg-danger fs-6 fw-bold px-3 py-1.5">
+                                                <i class="bi bi-exclamation-octagon-fill me-1"></i> {{ s.violations_count }} / {{ s.max_violations }} (Auto-Closed)
+                                            </span>
+                                        {% elif s.violations_count >= 10 %}
+                                            <span class="badge bg-warning text-dark fs-6 fw-bold px-3 py-1.5">
+                                                {{ s.violations_count }} / {{ s.max_violations }} (High Risk)
+                                            </span>
+                                        {% else %}
+                                            <span class="badge bg-success-subtle text-success border border-success fw-bold px-2.5 py-1.5">
+                                                {{ s.violations_count }} / {{ s.max_violations }} Warnings
+                                            </span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if s.status == 'terminated' %}
+                                            <span class="badge bg-danger text-uppercase"><i class="bi bi-x-circle me-1"></i> Terminated</span>
+                                            <small class="d-block text-danger mt-0.5" style="font-size: 0.72rem;">Exceeded 15 Look-Aways</small>
+                                        {% elif s.status == 'completed' %}
+                                            <span class="badge bg-success text-uppercase"><i class="bi bi-check-circle me-1"></i> Completed</span>
+                                        {% elif s.status == 'scheduled' %}
+                                            <span class="badge bg-info text-dark text-uppercase"><i class="bi bi-calendar-check me-1"></i> Scheduled</span>
+                                        {% else %}
+                                            <span class="badge bg-primary text-uppercase"><i class="bi bi-broadcast me-1"></i> In Progress</span>
+                                        {% endif %}
+                                    </td>
+                                    <td class="text-end">
+                                        <div class="d-flex justify-content-end gap-1">
+                                            <a href="{{ url_for('interview_room', session_id=s.id) }}" class="btn btn-sm btn-outline-primary" title="View / Join Room">
+                                                <i class="bi bi-camera-video"></i> Room
+                                            </a>
+                                            <button class="btn btn-sm btn-outline-dark" onclick="viewAuditModal({{ s.id }})" title="View Look-Away History">
+                                                <i class="bi bi-clock-history"></i> Log ({{ s.violations|length }})
+                                            </button>
+                                            <form method="POST" action="{{ url_for('reset_interview_session', session_id=s.id) }}" class="m-0" onsubmit="return confirm('Reset this session back to 0 warnings?');">
+                                                <button type="submit" class="btn btn-sm btn-outline-secondary" title="Reset Session">
+                                                    <i class="bi bi-arrow-counterclockwise"></i>
+                                                </button>
+                                            </form>
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            {% else %}
+                                <tr>
+                                    <td colspan="8" class="text-center py-4 text-muted">
+                                        No interview sessions recorded yet. Click "Schedule Interview & Link" to start.
+                                    </td>
+                                </tr>
+                            {% endif %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Admin Question Bank Management Card -->
+        <div class="card shadow-sm border-0 rounded-3 mt-4 overflow-hidden mb-5">
+            <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center flex-wrap gap-2">
+                <div class="d-flex align-items-center gap-2">
+                    <span class="p-1.5 bg-primary-subtle text-primary rounded-circle d-flex align-items-center justify-content-center" style="width: 34px; height: 34px;">
+                        <i class="bi bi-question-diamond-fill"></i>
+                    </span>
+                    <div>
+                        <h5 class="mb-0 fw-bold text-dark">Interview Question Bank (Admin Controlled)</h5>
+                        <small class="text-muted">Only Admins can change, add, edit, or set questions for candidates.</small>
+                    </div>
+                </div>
+                <div class="d-flex align-items-center gap-2">
+                    <span class="badge bg-secondary-subtle text-secondary border small py-1.5 px-2.5">
+                        <i class="bi bi-lock-fill me-1"></i> Admin Authorization Active
+                    </span>
+                    <button type="button" class="btn btn-sm btn-success fw-bold px-3 py-1.5 shadow-sm" onclick="showDashboardAddQuestionModal()">
+                        <i class="bi bi-plus-lg me-1"></i> Add New Question
+                    </button>
+                </div>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th style="width: 80px;">Order</th>
+                                <th>Title & Topic</th>
+                                <th>Category</th>
+                                <th>Question Prompt</th>
+                                <th class="text-end" style="width: 140px;">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% if questions %}
+                                {% for q in questions %}
+                                <tr>
+                                    <td><span class="badge bg-light text-dark border font-monospace">Q{{ loop.index }}</span></td>
+                                    <td>
+                                        <div class="fw-bold text-dark">{{ q.title }}</div>
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-info-subtle text-info-emphasis border border-info-subtle">{{ q.category }}</span>
+                                    </td>
+                                    <td>
+                                        <div class="small text-muted text-truncate" style="max-width: 480px;" title="{{ q.question }}">
+                                            {{ q.question }}
+                                        </div>
+                                    </td>
+                                    <td class="text-end">
+                                        <div class="d-flex justify-content-end gap-1">
+                                            <button type="button" class="btn btn-sm btn-outline-primary py-1 px-2" onclick="editQuestionFromDashboard({{ q.id }})" title="Edit Question">
+                                                <i class="bi bi-pencil-square"></i>
+                                            </button>
+                                            <button type="button" class="btn btn-sm btn-outline-danger py-1 px-2" onclick="deleteQuestionFromDashboard({{ q.id }})" title="Delete Question">
+                                                <i class="bi bi-trash"></i>
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            {% else %}
+                                <tr>
+                                    <td colspan="5" class="text-center py-4 text-muted">
+                                        No questions found. Click "Add New Question" to create questions.
+                                    </td>
+                                </tr>
+                            {% endif %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+<!-- Modal for Viewing Detailed Violation Audit Logs -->
+<div class="modal fade" id="auditModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content rounded-4 border-0 shadow">
+            <div class="modal-header bg-dark text-white">
+                <h5 class="modal-title fw-bold" id="auditModalTitle">
+                    <i class="bi bi-shield-shaded me-1 text-danger"></i> Look-Away Audit Log
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-4">
+                <div id="auditModalContent">
+                    <div class="text-center py-4"><span class="spinner-border text-primary"></span></div>
+                </div>
+            </div>
+            <div class="modal-footer bg-light">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal for Adding Question (Admin) from Dashboard -->
+<div class="modal fade" id="dashAddQuestionModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content rounded-4 border-0 shadow">
+            <div class="modal-header bg-success text-white">
+                <h5 class="modal-title fw-bold">
+                    <i class="bi bi-plus-circle-fill me-2"></i>Add Question to Bank (Admin)
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-4">
+                <div class="mb-3">
+                    <label class="form-label fw-bold small">Question Title</label>
+                    <input type="text" class="form-control" id="dashNewQTitle" placeholder="e.g. Distributed Database Consistency">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label fw-bold small">Category</label>
+                    <input type="text" class="form-control" id="dashNewQCategory" placeholder="e.g. System Design / Technical">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label fw-bold small">Question Statement</label>
+                    <textarea class="form-control font-monospace" id="dashNewQText" rows="5" placeholder="Enter problem statement..."></textarea>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label fw-bold small">Admin Passcode (Default: admin123)</label>
+                    <input type="password" class="form-control" id="dashNewQPasscode" value="admin123">
+                </div>
+            </div>
+            <div class="modal-footer bg-light">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-success fw-bold px-4" id="dashSubmitNewQBtn">
+                    <i class="bi bi-check-lg me-1"></i> Create Question
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+async function viewAuditModal(sessionId) {
+    const modal = new bootstrap.Modal(document.getElementById('auditModal'));
+    const content = document.getElementById('auditModalContent');
+    modal.show();
+
+    try {
+        const response = await fetch('/api/interview/proctor/live');
+        const data = await response.json();
+        const session = data.sessions.find(s => s.id === sessionId);
+
+        if (!session) {
+            content.innerHTML = '<div class="alert alert-warning">Session details not found.</div>';
+            return;
+        }
+
+        document.getElementById('auditModalTitle').innerHTML = `
+            <i class="bi bi-shield-shaded me-1 text-danger"></i> Look-Away Audit: ${session.candidate_name} (#${session.id})
+        `;
+
+        if (!session.violations || session.violations.length === 0) {
+            content.innerHTML = `
+                <div class="text-center py-4 text-success">
+                    <i class="bi bi-check-circle-fill fs-2 d-block mb-2"></i>
+                    <strong>Clean Proctor Record:</strong> No off-screen look-aways detected.
+                </div>
+            `;
+            return;
+        }
+
+        let html = `
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <span class="badge ${session.violations_count >= session.max_violations ? 'bg-danger' : 'bg-warning text-dark'} fs-6 px-3 py-1.5">
+                    Total Look-Aways: ${session.violations_count} / ${session.max_violations}
+                </span>
+                <span class="text-muted small">Status: <strong>${session.status.toUpperCase()}</strong></span>
+            </div>
+            <div class="table-responsive" style="max-height: 380px; overflow-y: auto;">
+                <table class="table table-sm table-striped small">
+                    <thead>
+                        <tr>
+                            <th>#</th>
+                            <th>Time</th>
+                            <th>Violation Type</th>
+                            <th>Description</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+        `;
+
+        session.violations.forEach(v => {
+            html += `
+                <tr>
+                    <td><span class="badge bg-danger">#${v.violation_number}</span></td>
+                    <td class="font-monospace">${v.timestamp}</td>
+                    <td><code>${v.violation_type}</code></td>
+                    <td>${v.description}</td>
+                </tr>
+            `;
+        });
+
+        html += `
+                    </tbody>
+                </table>
+            </div>
+        `;
+
+        if (session.violations_count >= session.max_violations) {
+            html += `
+                <div class="alert alert-danger mt-3 mb-0 small">
+                    <i class="bi bi-x-octagon-fill me-1"></i>
+                    <strong>Auto-Close Enforced:</strong> Reached 15 look-away warnings. Interview was automatically closed and locked.
+                </div>
+            `;
+        }
+
+        content.innerHTML = html;
+    } catch (e) {
+        content.innerHTML = `<div class="alert alert-danger">Error loading log: ${e.message}</div>`;
+    }
+}
+
+// Live background poll for proctor dashboard
+setInterval(async () => {
+    try {
+        const resp = await fetch('/api/interview/proctor/live');
+        const data = await resp.json();
+        const tbody = document.getElementById('proctorSessionsBody');
+        const pollTime = document.getElementById('proctorPollTime');
+        if (pollTime) pollTime.textContent = 'Auto-sync: ' + new Date().toLocaleTimeString();
+
+        if (tbody && data.sessions && data.sessions.length > 0) {
+            tbody.innerHTML = data.sessions.map(s => `
+                <tr class="${s.status === 'terminated' ? 'table-danger' : ''}">
+                    <td><strong>#${s.id}</strong></td>
+                    <td>
+                        <div class="fw-bold text-dark">${s.candidate_name}</div>
+                        <small class="text-muted">${s.candidate_email} (${s.role_applied})</small>
+                    </td>
+                    <td>
+                        ${s.meeting_code 
+                            ? `<div class="d-flex align-items-center gap-1">
+                                <span class="badge bg-light text-dark font-monospace border">${s.meeting_code}</span>
+                                <button type="button" class="btn btn-sm btn-outline-primary py-0 px-1.5" onclick="navigator.clipboard.writeText('${s.meeting_link || window.location.origin + '/interview/join/' + s.meeting_code}').then(() => alert('Meeting Link Copied!'))" title="Copy meeting link">
+                                    <i class="bi bi-clipboard"></i>
+                                </button>
+                               </div>` 
+                            : '<span class="text-muted small">N/A</span>'}
+                    </td>
+                    <td>
+                        ${s.scheduled_date 
+                            ? `<div class="small fw-semibold text-dark"><i class="bi bi-calendar-event me-1 text-primary"></i>${s.scheduled_date}</div><small class="text-muted">${s.scheduled_time || ''}</small>`
+                            : `<small class="text-muted">${s.created_at}</small>`}
+                    </td>
+                    <td>
+                        ${s.screen_sharing_active 
+                            ? '<span class="badge bg-success-subtle text-success border border-success fw-bold"><i class="bi bi-display me-1"></i> Live</span>' 
+                            : '<span class="badge bg-danger-subtle text-danger border border-danger-subtle fw-bold"><i class="bi bi-display-slash me-1"></i> Off</span>'}
+                    </td>
+                    <td>
+                        ${s.violations_count >= s.max_violations
+                            ? `<span class="badge bg-danger fs-6 fw-bold px-3 py-1.5"><i class="bi bi-exclamation-octagon-fill me-1"></i> ${s.violations_count} / ${s.max_violations} (Auto-Closed)</span>`
+                            : s.violations_count >= 10
+                            ? `<span class="badge bg-warning text-dark fs-6 fw-bold px-3 py-1.5">${s.violations_count} / ${s.max_violations} (High Risk)</span>`
+                            : `<span class="badge bg-success-subtle text-success border border-success fw-bold px-2.5 py-1.5">${s.violations_count} / ${s.max_violations} Warnings</span>`}
+                    </td>
+                    <td>
+                        ${s.status === 'terminated'
+                            ? '<span class="badge bg-danger text-uppercase"><i class="bi bi-x-circle me-1"></i> Terminated</span><small class="d-block text-danger mt-0.5" style="font-size: 0.72rem;">Exceeded 15 Look-Aways</small>'
+                            : s.status === 'completed'
+                            ? '<span class="badge bg-success text-uppercase"><i class="bi bi-check-circle me-1"></i> Completed</span>'
+                            : s.status === 'scheduled'
+                            ? '<span class="badge bg-info text-dark text-uppercase"><i class="bi bi-calendar-check me-1"></i> Scheduled</span>'
+                            : '<span class="badge bg-primary text-uppercase"><i class="bi bi-broadcast me-1"></i> In Progress</span>'}
+                    </td>
+                    <td class="text-end">
+                        <div class="d-flex justify-content-end gap-1">
+                            <a href="/interview/${s.id}" class="btn btn-sm btn-outline-primary" title="View Interview Room">
+                                <i class="bi bi-camera-video"></i> Room
+                            </a>
+                            <button class="btn btn-sm btn-outline-dark" onclick="viewAuditModal(${s.id})" title="View Look-Away History">
+                                <i class="bi bi-clock-history"></i> Log (${s.violations ? s.violations.length : 0})
+                            </button>
+                        </div>
+                    </td>
+                </tr>
+            `).join('');
+        }
+    } catch (e) {}
+}, 4000);
+
+// Question Bank Admin Management Functions
+function showDashboardAddQuestionModal() {
+    const modal = new bootstrap.Modal(document.getElementById('dashAddQuestionModal'));
+    modal.show();
+}
+
+const dashSubmitBtn = document.getElementById('dashSubmitNewQBtn');
+if (dashSubmitBtn) {
+    dashSubmitBtn.addEventListener('click', async () => {
+        const title = document.getElementById('dashNewQTitle').value.trim();
+        const category = document.getElementById('dashNewQCategory').value.trim() || 'Technical';
+        const text = document.getElementById('dashNewQText').value.trim();
+        const passcode = document.getElementById('dashNewQPasscode').value.trim();
+
+        if (!title || !text) {
+            alert('Please fill in title and question prompt.');
+            return;
+        }
+
+        try {
+            const resp = await fetch('/api/admin/questions/add', {
+                method: 'POST',
+                headers: { 
+                    'Content-Type': 'application/json',
+                    'X-Admin-Key': passcode
+                },
+                body: JSON.stringify({ title, category, question: text, admin_key: passcode })
+            });
+            const data = await resp.json();
+            if (data.success) {
+                alert('Question successfully added to question bank!');
+                location.reload();
+            } else {
+                alert(data.error || 'Failed to add question');
+            }
+        } catch(e) {
+            alert('Server connection error.');
+        }
+    });
+}
+
+async function editQuestionFromDashboard(qid) {
+    const newTitle = prompt('Enter new title for question:');
+    if (!newTitle) return;
+    const newText = prompt('Enter new problem statement / question text:');
+    if (!newText) return;
+    const passcode = prompt('Enter Admin Passcode (default: admin123):', 'admin123');
+
+    try {
+        const resp = await fetch(`/api/admin/questions/${qid}/edit`, {
+            method: 'POST',
+            headers: { 
+                'Content-Type': 'application/json',
+                'X-Admin-Key': passcode
+            },
+            body: JSON.stringify({ title: newTitle, question: newText, admin_key: passcode })
+        });
+        const data = await resp.json();
+        if (data.success) {
+            alert('Question updated successfully!');
+            location.reload();
+        } else {
+            alert(data.error || 'Failed to edit question');
+        }
+    } catch(e) {
+        alert('Server error.');
+    }
+}
+
+async function deleteQuestionFromDashboard(qid) {
+    if (!confirm('Are you sure you want to remove this question from the question bank?')) return;
+    const passcode = prompt('Enter Admin Passcode to confirm deletion (default: admin123):', 'admin123');
+
+    try {
+        const resp = await fetch(`/api/admin/questions/${qid}/delete`, {
+            method: 'POST',
+            headers: { 
+                'Content-Type': 'application/json',
+                'X-Admin-Key': passcode
+            },
+            body: JSON.stringify({ admin_key: passcode })
+        });
+        const data = await resp.json();
+        if (data.success) {
+            alert('Question removed successfully!');
+            location.reload();
+        } else {
+            alert(data.error || 'Failed to delete question');
+        }
+    } catch(e) {
+        alert('Server error.');
+    }
+}
+</script>
+{% endblock %}

@@ -1,0 +1,247 @@
+/* Live Interview Proctoring Stylesheet */
+
+.interview-container {
+    max-width: 1440px;
+    margin: 0 auto;
+}
+
+/* Header Banner */
+.proctor-header {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 14px;
+    padding: 1rem 1.5rem;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+    margin-bottom: 1.5rem;
+}
+
+/* Warning Gauge Widget */
+.warning-counter-card {
+    background: #ffffff;
+    border: 2px solid #e2e8f0;
+    border-radius: 14px;
+    padding: 1rem 1.25rem;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+    transition: all 0.3s ease;
+}
+
+.warning-counter-card.danger-state {
+    border-color: #ef4444;
+    background: #fff5f5;
+    box-shadow: 0 0 0 4px rgba(239, 68, 68, 0.2);
+}
+
+.counter-number {
+    font-size: 2.2rem;
+    font-weight: 800;
+    line-height: 1;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+/* Live Webcam Proctoring Box */
+.proctor-cam-card {
+    background: #111827;
+    border-radius: 16px;
+    overflow: hidden;
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
+    border: 1px solid #374151;
+}
+
+.cam-feed-wrapper {
+    position: relative;
+    width: 100%;
+    aspect-ratio: 4/3;
+    background: #000000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+}
+
+.cam-feed-wrapper video {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transform: scaleX(-1);
+}
+
+.cam-feed-wrapper canvas {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    transform: scaleX(-1);
+}
+
+/* Gaze Status Badge */
+.gaze-overlay-status {
+    position: absolute;
+    top: 12px;
+    left: 12px;
+    z-index: 10;
+}
+
+/* Look-Away Sustained Warning Bar on Top of Camera */
+.lookaway-indicator-bar-wrapper {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    height: 6px;
+    background: rgba(255, 255, 255, 0.2);
+    z-index: 15;
+}
+
+.lookaway-indicator-bar {
+    height: 100%;
+    width: 0%;
+    background: #ef4444;
+    transition: width 0.05s linear;
+    box-shadow: 0 0 10px rgba(239, 68, 68, 0.9);
+}
+
+/* Anti-Cheat: Text Selection Disabled on Question Prompts */
+.question-card h6, .question-card .badge, .question-card span:not(.font-monospace) {
+    user-select: none !important;
+    -webkit-user-select: none !important;
+    -moz-user-select: none !important;
+    -ms-user-select: none !important;
+}
+
+/* Flashing Warning Banner */
+.warning-flash-banner {
+    background: linear-gradient(135deg, #ef4444 0%, #b91c1c 100%);
+    color: #ffffff;
+    border-radius: 12px;
+    padding: 0.85rem 1.25rem;
+    font-size: 1rem;
+    animation: pulseAlert 0.4s infinite alternate;
+    box-shadow: 0 4px 15px rgba(239, 68, 68, 0.4);
+}
+
+@keyframes pulseAlert {
+    from { transform: scale(1); }
+    to { transform: scale(1.02); }
+}
+
+/* Questions and Answer Space */
+.question-card {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 14px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.04);
+    margin-bottom: 1.5rem;
+    transition: border-color 0.2s;
+}
+
+.question-card:focus-within {
+    border-color: #0284c7;
+    box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.15);
+}
+
+.question-answer-box {
+    border: 1.5px solid #cbd5e1;
+    border-radius: 10px;
+    font-family: 'Consolas', 'Courier New', monospace;
+    font-size: 0.95rem;
+    min-height: 140px;
+    resize: vertical;
+}
+
+/* FULLSCREEN AUTOMATIC TERMINATION OVERLAY */
+.termination-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: rgba(15, 23, 42, 0.96);
+    backdrop-filter: blur(12px);
+    z-index: 99999;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1.5rem;
+    animation: fadeInOverlay 0.4s ease-out;
+}
+
+@keyframes fadeInOverlay {
+    from { opacity: 0; transform: scale(0.95); }
+    to { opacity: 1; transform: scale(1); }
+}
+
+.termination-modal-card {
+    background: #ffffff;
+    border-radius: 24px;
+    max-width: 680px;
+    width: 100%;
+    padding: 2.5rem;
+    text-align: center;
+    box-shadow: 0 25px 60px rgba(0, 0, 0, 0.4);
+    border-top: 8px solid #dc2626;
+}
+
+.termination-icon {
+    width: 84px;
+    height: 84px;
+    background: #fee2e2;
+    color: #dc2626;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 3rem;
+    margin: 0 auto 1.5rem;
+    animation: bounceIcon 0.8s ease;
+}
+
+@keyframes bounceIcon {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-8px); }
+}
+
+/* Completion Modal */
+.completion-modal-card {
+    background: #ffffff;
+    border-radius: 24px;
+    max-width: 620px;
+    width: 100%;
+    padding: 2.5rem;
+    text-align: center;
+    border-top: 8px solid #16a34a;
+    box-shadow: 0 25px 60px rgba(0, 0, 0, 0.4);
+}
+
+/* Screen Share Styles */
+.screen-share-card {
+    background: #111827;
+    border-radius: 16px;
+    overflow: hidden;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+    border: 1px solid #374151;
+}
+
+.screen-share-wrapper {
+    position: relative;
+    width: 100%;
+    aspect-ratio: 16/9;
+    background: #000000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+}
+
+.screen-share-wrapper video {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+}
+
+#cameraSelect {
+    cursor: pointer;
+    font-size: 0.82rem;
+}
+

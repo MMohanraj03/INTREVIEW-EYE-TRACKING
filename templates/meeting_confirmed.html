@@ -1,0 +1,107 @@
+{% extends "base.html" %}
+
+{% block title %}Interview Meeting Link Generated{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center my-4">
+    <div class="col-lg-8">
+        <div class="card shadow-lg border-0 rounded-4 overflow-hidden">
+            <div class="p-4 p-md-5 text-white text-center" style="background: linear-gradient(135deg, #065f46 0%, #059669 100%) !important;">
+                <div class="d-inline-flex p-3 rounded-circle bg-white bg-opacity-20 mb-3 fs-1 text-white">
+                    <i class="bi bi-check2-circle"></i>
+                </div>
+                <h2 class="fw-bold mb-1">Interview Scheduled Successfully!</h2>
+                <p class="mb-0 text-white-50 lead fs-6">
+                    A unique, secure meeting link has been generated for this proctored interview.
+                </p>
+            </div>
+
+            <div class="card-body p-4 p-md-5 bg-white">
+                <!-- Meeting Link Box with 1-Click Copy -->
+                <div class="p-4 bg-light rounded-4 border mb-4">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <span class="text-uppercase fw-bold text-muted small"><i class="bi bi-link-45deg text-primary me-1"></i> Meeting Link</span>
+                        <span class="badge bg-primary-subtle text-primary border border-primary-subtle fw-semibold">Code: {{ session.meeting_code }}</span>
+                    </div>
+
+                    <div class="input-group input-group-lg shadow-sm">
+                        <input type="text" class="form-control bg-white font-monospace fs-6" id="meetingLinkInput" value="{{ session.meeting_link }}" readonly>
+                        <button class="btn btn-primary px-4 fw-bold" type="button" id="copyMeetingLinkBtn" onclick="copyMeetingLink()">
+                            <i class="bi bi-clipboard me-1" id="copyIcon"></i> <span id="copyBtnText">Copy Link</span>
+                        </button>
+                    </div>
+                    <small class="text-muted mt-2 d-block">
+                        <i class="bi bi-info-circle me-1"></i> Share this link with the candidate. They can open it in any browser to enter the proctoring room.
+                    </small>
+                </div>
+
+                <!-- Schedule Details Card -->
+                <div class="row g-3 mb-4">
+                    <div class="col-sm-6">
+                        <div class="p-3 border rounded-3 bg-white h-100">
+                            <span class="text-muted small d-block mb-1"><i class="bi bi-calendar-event text-primary me-1"></i> Scheduled Date & Time</span>
+                            <h5 class="fw-bold text-dark mb-0">{{ session.scheduled_date }} at {{ session.scheduled_time }}</h5>
+                        </div>
+                    </div>
+                    <div class="col-sm-6">
+                        <div class="p-3 border rounded-3 bg-white h-100">
+                            <span class="text-muted small d-block mb-1"><i class="bi bi-person-badge text-success me-1"></i> Candidate</span>
+                            <h5 class="fw-bold text-dark mb-0">{{ session.candidate_name }}</h5>
+                            <small class="text-muted">{{ session.candidate_email }} ({{ session.role_applied }})</small>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Proctoring Notice -->
+                <div class="alert alert-warning border-0 p-3 mb-4 rounded-3 d-flex align-items-center gap-3">
+                    <i class="bi bi-shield-lock-fill text-warning fs-3"></i>
+                    <div class="small">
+                        <strong>AI Proctor Rule:</strong> Candidate eyeballs must remain in the <strong>CENTER</strong>. Any gaze deviation to <strong>LEFT, RIGHT, TOP, or BOTTOM</strong> triggers a penalty warning every second. 15 warnings locks and terminates the interview.
+                    </div>
+                </div>
+
+                <!-- Share & Action Buttons -->
+                <div class="d-flex flex-wrap gap-2 mb-3">
+                    <form method="POST" action="{{ url_for('interview_enter', session_id=session.id) }}" class="flex-grow-1 m-0">
+                        <button type="submit" class="btn btn-success btn-lg fw-bold w-100 py-3 shadow-sm">
+                            <i class="bi bi-play-circle-fill me-1"></i> Start / Join Interview Now
+                        </button>
+                    </form>
+                    
+                    <a href="https://wa.me/?text={{ 'Your proctored interview link: ' + session.meeting_link | urlencode }}" target="_blank" class="btn btn-outline-success btn-lg fw-bold px-3 py-3" title="Share via WhatsApp">
+                        <i class="bi bi-whatsapp"></i> WhatsApp
+                    </a>
+
+                    <a href="mailto:{{ session.candidate_email }}?subject=Interview Meeting Link: {{ session.role_applied }}&body={{ 'Hello ' + session.candidate_name + ',\n\nYour interview is scheduled for ' + session.scheduled_date + ' at ' + session.scheduled_time + '.\n\nPlease join using your proctored interview link:\n' + session.meeting_link + '\n\nBest regards,\nRecruitment Team' | urlencode }}" class="btn btn-outline-primary btn-lg fw-bold px-3 py-3" title="Share via Email">
+                        <i class="bi bi-envelope"></i> Email
+                    </a>
+                </div>
+
+                <div class="text-center pt-2">
+                    <a href="{{ url_for('proctor_dashboard') }}" class="text-muted small text-decoration-none">
+                        <i class="bi bi-speedometer2 me-1"></i> Back to Proctor Dashboard
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function copyMeetingLink() {
+    const input = document.getElementById('meetingLinkInput');
+    input.select();
+    input.setSelectionRange(0, 99999);
+    navigator.clipboard.writeText(input.value).then(() => {
+        const btnText = document.getElementById('copyBtnText');
+        const icon = document.getElementById('copyIcon');
+        btnText.textContent = 'Copied!';
+        icon.className = 'bi bi-check-lg';
+        setTimeout(() => {
+            btnText.textContent = 'Copy Link';
+            icon.className = 'bi bi-clipboard';
+        }, 2500);
+    });
+}
+</script>
+{% endblock %}
