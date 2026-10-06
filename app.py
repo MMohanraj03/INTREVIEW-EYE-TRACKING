@@ -573,9 +573,15 @@ def reset_interview_session(session_id):
     return redirect(url_for('index'))
 
 
+@app.route('/api/index.py')
+def vercel_index():
+    return render_template('index.html')
+
 @app.errorhandler(404)
 def handle_404(e):
-    return redirect(url_for('index'))
+    if request.path in ('/', '/api/index.py', '/index'):
+        return render_template('index.html')
+    return render_template('index.html'), 404
 
 # Legacy Route Fallbacks (Redirect any old stroke/patient/doctor URLs to Interview Proctoring)
 @app.route('/patient/dashboard')
